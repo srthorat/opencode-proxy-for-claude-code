@@ -1,0 +1,60 @@
+services:
+  opencode-proxy:
+    build: .
+    # Internal only — Headroom connects via Docker network.
+    # Not exposed on host; clients use Headroom:8787 instead.
+    # To access the proxy directly (bypassing Headroom), add:
+    #   ports:
+    #     - "8080:8080"
+    env_file: .env
+    depends_on:
+      headroom:
+        condition: service_healthy
+        required: false # Headroom is opt-in; proxy starts without it
+    restart: unless-stopped
+
+  # Headroom compression proxy — public entry point on port 8787.
+  # Flow: Client → Headroom:8787 → opencode-proxy:8080 → upstream
+  # Configure your client: ANTHROPIC_BASE_URL=http://localhost:8787
+  headroom:
+    build:
+      context: .
+      dockerfile: Dockerfile.headroom
+    ports:
+      - "8787:8787"
+    command:
+      [
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8787",
+        "--memory",
+        "--memory-db-path",
+        "/data/headroom.db",
+        "--code-aware",
+        "--intercept-tool-results",
+      ]
+    environment:
+      - ANTHROPIC_TARGET_API_URL=http://opencode-proxy:8080
+      - ANTHROPIC_API_KEY=${OPENCODE_API_KEY}
+      - OPENAI_TARGET_API_URL=http://opencode-proxy:8080/v1
+      - OPENAI_API_KEY=${OPENCODE_API_KEY}
+      - HEADROOM_TELEMETRY=off
+      # ── Compression tuning (aggressive) ──────────────────────────────────
+      - HEADROOM_COMPRESSION_STABLE_AFTER_TURN=1
+      - HEADROOM_STALE_READ_COMPRESS_AFTER_TURNS=1
+      - HEADROOM_COMPRESS_USER_MESSAGES=true
+      - HEADROOM_COMPRESS_SYSTEM_MESSAGES=true
+      - HEADROOM_MIN_TOKENS=50
+    volumes:
+      - headroom-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8787/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  headroom-data:

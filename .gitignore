@@ -1,0 +1,20 @@
+# Environment — never commit real keys
+.env
+
+# Runtime PIDs written by run.sh / stop.sh
+.run/
+
+# SQLite databases
+*.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+dist/
+*.egg-info/
+
+# macOS
+.DS_Store

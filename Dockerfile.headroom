@@ -1,0 +1,54 @@
+FROM ghcr.io/chopratejas/headroom@sha256:d4f1d0f8c249e6b8c025ab83ccb84209563e1b0c6a8b20e5b248a7aa2904adc2
+
+# Install code-aware extras (tree-sitter AST compression) — pinned to 0.25.0
+RUN pip install --no-cache-dir "headroom-ai[code]==0.25.0" || echo "[warn] headroom-ai[code] failed"
+
+# Install ast-grep binary.
+# The PyPI wheel (ast-grep-cli) has no aarch64 Linux binary, so we pull the
+# upstream GitHub release. The zip contains both 'sg' and 'ast-grep' binaries.
+# Release asset naming: app-{arch}-{os}.zip  (no 'v' prefix on the tag)
+ARG AST_GREP_VERSION=0.43.0
+RUN set -eux; \
+    ARCH=$(uname -m); \
+    case "$ARCH" in \
+      aarch64) TRIPLE="aarch64-unknown-linux-gnu" ;; \
+      x86_64)  TRIPLE="x86_64-unknown-linux-gnu"  ;; \
+      *) echo "[warn] ast-grep: unsupported arch $ARCH, skipping"; exit 0 ;; \
+    esac; \
+    apt-get update -qq \
+    && apt-get install -y --no-install-recommends curl unzip \
+    && curl -fsSL \
+         "https://github.com/ast-grep/ast-grep/releases/download/${AST_GREP_VERSION}/app-${TRIPLE}.zip" \
+         -o /tmp/sg.zip \
+    && unzip -o /tmp/sg.zip ast-grep -d /usr/local/bin/ \
+    && chmod +x /usr/local/bin/ast-grep \
+    && rm /tmp/sg.zip \
+    && apt-get purge -y unzip \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/* \
+    && ast-grep --version
+
+# Pre-fetch all headroom tool binaries (difft, scc, ast-grep) at build time
+# so the container starts instantly without downloading on first request.
+RUN headroom tools install
+
+# Pre-download Qwen tokenizer at build time so it's cached in the image.
+# Prevents the runtime HuggingFace "new version downloaded" warning and
+# avoids slow first-request latency from downloading tokenizer files.
+RUN python3 -c "from transformers import AutoTokenizer; AutoTokenizer.from_pretrained('Qwen/Qwen-7B', trust_remote_code=True, revision='main')" \
+    || echo "[warn] Qwen tokenizer pre-download failed — will download at runtime"
+
+# Patch Headroom 0.25.0 bug: ccr_workspace_key is assigned inside the
+# ccr_inject_tool/ccr_inject_system_instructions guard block but referenced
+# after it, causing UnboundLocalError when --no-ccr-inject-tool is used.
+RUN FILE=/usr/local/lib/python3.13/site-packages/headroom/proxy/handlers/anthropic.py && \
+    python3 - <<'EOF'
+import re, pathlib
+p = pathlib.Path("/usr/local/lib/python3.13/site-packages/headroom/proxy/handlers/anthropic.py")
+txt = p.read_text()
+old = '            if (\n                self.config.ccr_inject_tool or self.config.ccr_inject_system_instructions\n            ) and not _bypass:'
+new = '            ccr_workspace_key = None\n            ccr_workspace_label = None\n            if (\n                self.config.ccr_inject_tool or self.config.ccr_inject_system_instructions\n            ) and not _bypass:'
+assert old in txt, "patch target not found — Headroom may have been updated"
+p.write_text(txt.replace(old, new, 1))
+print("Patch applied.")
+EOF
