@@ -5,21 +5,44 @@ logger = logging.getLogger("opencode-proxy")
 _UNSUPPORTED = {"redacted_thinking", "thinking"}
 
 
-def _strip_thinking(blocks: list) -> list:
-    """Recursively strip redacted_thinking/thinking blocks from a content list.
-
-    Also descends into tool_result content lists so that Claude Code's agentic
-    loop — which regularly carries redacted_thinking blocks inside tool results —
-    is cleaned up correctly.
-    """
+def _strip_thinking_count(blocks: list) -> tuple[list, int]:
+    """Recursively strip thinking/redacted_thinking blocks; return (cleaned, count_stripped)."""
     out = []
+    stripped = 0
     for b in blocks:
         if isinstance(b, dict) and b.get("type") in _UNSUPPORTED:
+            stripped += 1
             continue
         if isinstance(b, dict) and b.get("type") == "tool_result" and isinstance(b.get("content"), list):
-            b = {**b, "content": _strip_thinking(b["content"])}
+            inner, n = _strip_thinking_count(b["content"])
+            stripped += n
+            b = {**b, "content": inner}
         out.append(b)
-    return out
+    return out, stripped
+
+
+def _strip_thinking(blocks: list) -> list:
+    """Strip thinking/redacted_thinking blocks from a content list, logging if any are found."""
+    cleaned, n = _strip_thinking_count(blocks)
+    if n:
+        logger.warning("Stripped %d thinking block(s) from content list", n)
+    return cleaned
+
+
+def strip_thinking_from_system(system) -> "str | list":
+    """Strip redacted_thinking/thinking blocks from the top-level system field.
+
+    If system is an array (Anthropic extended format), drop unsupported blocks.
+    Returns the cleaned value (string or list).
+    """
+    if not isinstance(system, list):
+        return system
+    cleaned = [b for b in system if not (isinstance(b, dict) and b.get("type") in _UNSUPPORTED)]
+    if len(cleaned) != len(system):
+        logger.warning(
+            "Stripped %d thinking block(s) from system field", len(system) - len(cleaned)
+        )
+    return cleaned
 
 
 def _sanitize_messages(messages: list, payload: dict) -> list:

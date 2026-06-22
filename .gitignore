@@ -18,3 +18,11 @@ dist/
 
 # macOS
 .DS_Store
+
+# Caches and tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# marketing
+marketing

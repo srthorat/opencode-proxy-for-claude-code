@@ -15,7 +15,7 @@ from conversion.request import _anthropic_to_openai
 from conversion.response import _openai_to_anthropic
 from conversion.streaming import _openai_stream_to_anthropic
 from router import auto_select_model, resolve_model_config, map_claude_model_name, get_fallbacks
-from sanitization import _sanitize_messages
+from sanitization import _sanitize_messages, strip_thinking_from_system
 
 logger = logging.getLogger("opencode-proxy")
 
@@ -54,6 +54,9 @@ async def _sanitize_and_route(ctx: RequestContext) -> None:
 
         if "messages" in payload:
             payload["messages"] = _sanitize_messages(payload["messages"], payload)
+
+        if "system" in payload:
+            payload["system"] = strip_thinking_from_system(payload["system"])
 
         # Strip extended-thinking / betas fields unsupported by OpenCode
         payload.pop("betas", None)
