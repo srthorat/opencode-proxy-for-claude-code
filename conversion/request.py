@@ -2,7 +2,6 @@ import json
 from typing import Any
 
 
-
 def _anthropic_to_openai(payload: dict) -> dict:
     """Convert an Anthropic Messages API payload to OpenAI Chat Completions format."""
     oai: dict = {"model": payload.get("model", "")}
