@@ -1,5 +1,7 @@
 # opencode-proxy
 
+![OpenCode Proxy Cover](assets/linkedin-cover.png)
+
 **Use Claude Code with [OpenCode](https://opencode.ai) models — cheaper, smarter routing, and automatic context compression.**
 
 This stack combines two tools:
