@@ -1,19 +1,18 @@
 import hashlib
-import os
 import json
 import logging
+import os
 from functools import lru_cache
-from typing import Optional
 
 from client import get_client
 from config import (
     CODER_MAP_FREE,
     CODER_MAP_GO,
-    UPSTREAM_URL,
-    UPSTREAM_API_KEY,
-    MODEL_MAP,
-    DIRECT_URL,
     DIRECT_KEY,
+    DIRECT_URL,
+    MODEL_MAP,
+    UPSTREAM_API_KEY,
+    UPSTREAM_URL,
 )
 
 logger = logging.getLogger("opencode-proxy")
@@ -185,8 +184,9 @@ def resolve_model_config(name: str):
         role = entry.get("role")
 
         # model override
-        if entry.get("model"):
-            upstream_model = entry.get("model")
+        model_val = entry.get("model")
+        if isinstance(model_val, str) and model_val:
+            upstream_model = model_val
 
         # url handling: allow literal placeholders
         url_val = entry.get("url")
@@ -221,7 +221,7 @@ def resolve_model_config(name: str):
 
 async def auto_select_model(
     messages: list,
-    forced_tier: Optional[str] = None,
+    forced_tier: str | None = None,
     has_tools: bool = False,
 ) -> str:
     """Select the best upstream model for the given conversation.

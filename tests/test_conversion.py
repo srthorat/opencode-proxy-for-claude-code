@@ -1,11 +1,9 @@
 """Tests for conversion/request.py (_anthropic_to_openai) and
 conversion/response.py (_openai_to_anthropic)."""
 import json
-import pytest
 
 from conversion.request import _anthropic_to_openai
 from conversion.response import _openai_to_anthropic
-
 
 # ---------------------------------------------------------------------------
 # _anthropic_to_openai

@@ -11,4 +11,4 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: python -m pytest tests/ -v
       - run: ruff check .
-      - run: mypy *.py conversion/
+      - run: mypy *.py conversion/ observability/

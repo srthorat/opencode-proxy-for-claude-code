@@ -1,11 +1,11 @@
 """Tests for router.py — _keyword_fallback, map_claude_model_name, auto_select_model."""
 import json
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from router import _keyword_fallback, map_claude_model_name, auto_select_model
-from config import CODER_MAP_FREE, CODER_MAP_GO
+import pytest
 
+from config import CODER_MAP_FREE, CODER_MAP_GO
+from router import _keyword_fallback, auto_select_model, map_claude_model_name
 
 # ---------------------------------------------------------------------------
 # _keyword_fallback

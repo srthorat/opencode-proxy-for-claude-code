@@ -1,8 +1,7 @@
-import os
 import json
 import logging
+import os
 import pathlib
-from typing import Dict, Optional, Union
 
 try:
     from dotenv import load_dotenv
@@ -13,21 +12,22 @@ except ImportError:
 logger = logging.getLogger("opencode-proxy")
 
 UPSTREAM_URL: str = os.getenv("UPSTREAM_URL", "https://api.opencode.ai").rstrip("/")
-UPSTREAM_API_KEY: Optional[str] = os.getenv("OPENCODE_API_KEY")
+UPSTREAM_API_KEY: str | None = os.getenv("OPENCODE_API_KEY")
 PORT: int = int(os.getenv("PORT", "8080"))
 # Optional inbound auth — if set, every request must carry "Authorization: Bearer <key>"
-PROXY_API_KEY: Optional[str] = os.getenv("PROXY_API_KEY")
+PROXY_API_KEY: str | None = os.getenv("PROXY_API_KEY")
 # Direct provider bypass — routes direct:<model> straight to a non-OpenCode endpoint
 DIRECT_URL: str = os.getenv("DIRECT_URL", "").rstrip("/")
-DIRECT_KEY: Optional[str] = os.getenv("DIRECT_KEY")
+DIRECT_KEY: str | None = os.getenv("DIRECT_KEY")
 
 # MODEL_MAP: prefer MODEL_MAP env var (runtime override) then models.json
 _MODEL_MAP_JSON: str = os.getenv("MODEL_MAP", "")
+MODEL_MAP: dict[str, str | dict[str, str]]
 if _MODEL_MAP_JSON:
     try:
-        MODEL_MAP: Dict[str, Union[str, Dict[str, str]]] = json.loads(_MODEL_MAP_JSON)
+        MODEL_MAP = json.loads(_MODEL_MAP_JSON)
     except json.JSONDecodeError as e:
-        MODEL_MAP: Dict[str, Union[str, Dict[str, str]]] = {}
+        MODEL_MAP = {}
         logger.warning("MODEL_MAP env var contains invalid JSON (ignored): %s", e)
 else:
     _models_file = pathlib.Path(__file__).parent / "models.json"
@@ -47,7 +47,7 @@ else:
 
 # Free tier (zen/v1) — fast, cheap, used for simple/trivial tasks
 # Note: free-tier models use OpenAI-compat /chat/completions endpoint.
-CODER_MAP_FREE: Dict[str, str] = {
+CODER_MAP_FREE: dict[str, str] = {
     "trivial": "big-pickle",            # one-liners, quick facts, tiny scripts
     "simple":  "north-mini-code-free",   # basic code, short functions, easy debug
     "fast":    "deepseek-v4-flash-free", # fast general free fallback
@@ -61,7 +61,7 @@ CODER_MAP_FREE: Dict[str, str] = {
 # OpenAI-compat (/v1/chat/completions): kimi-k2.7, kimi-k2.6, deepseek-v4-pro,
 #                                        deepseek-v4-flash, mimo-v2.5, mimo-v2.5-pro,
 #                                        glm-5.2, glm-5.1
-CODER_MAP_GO: Dict[str, str] = {
+CODER_MAP_GO: dict[str, str] = {
     "code":      "kimi-k2.7",         # complex code, algorithms, multi-file debug
     "reasoning": "deepseek-v4-pro",   # architecture, math, analysis, step-by-step
     "long":      "minimax-m3",        # large context, documents, summarization

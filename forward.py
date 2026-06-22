@@ -5,16 +5,16 @@ import uuid
 
 import httpx
 from fastapi import Request, Response
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from auth import check_auth
 from client import get_client
-from config import UPSTREAM_URL, UPSTREAM_API_KEY, _ANTHROPIC_COMPAT_MODELS
+from config import _ANTHROPIC_COMPAT_MODELS, UPSTREAM_API_KEY, UPSTREAM_URL
 from context import RequestContext
 from conversion.request import _anthropic_to_openai
 from conversion.response import _openai_to_anthropic
 from conversion.streaming import _openai_stream_to_anthropic
-from router import auto_select_model, resolve_model_config, map_claude_model_name, get_fallbacks
+from router import auto_select_model, get_fallbacks, map_claude_model_name, resolve_model_config
 from sanitization import _sanitize_messages, strip_thinking_from_system
 
 logger = logging.getLogger("opencode-proxy")
@@ -96,7 +96,7 @@ async def _sanitize_and_route(ctx: RequestContext) -> None:
 
         ctx.send_content = json.dumps(payload).encode("utf-8")
 
-    except Exception as e:
+    except Exception:
         logger.exception("Payload processing error (leaving body as-is)")
 
 
@@ -153,7 +153,7 @@ def _build_target_url(ctx: RequestContext) -> None:
                     p["messages"] = [{"role": "user", "content": prompt_val}]
                     ctx.send_content = json.dumps(p).encode("utf-8")
                     ctx.headers["content-length"] = str(len(ctx.send_content))
-            except Exception as e:
+            except Exception:
                 logger.exception("Legacy completions path rewrite failed")
     elif path.startswith("/v1/chat/completions"):
         path = path.replace("/v1/chat/completions", "/chat/completions", 1)
@@ -259,6 +259,7 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
                     logger.exception("Debug message structure logging failed")
 
         try:
+            assert ctx.target_url is not None
             upstream_resp = await client.send(
                 client.build_request(
                     ctx.method, ctx.target_url, headers=ctx.headers, content=ctx.send_content

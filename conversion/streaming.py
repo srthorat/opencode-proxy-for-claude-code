@@ -1,7 +1,6 @@
 import json
 import logging
 import uuid
-from typing import Optional
 
 from conversion import STOP_REASON_MAP
 
@@ -35,7 +34,7 @@ async def _openai_stream_to_anthropic(upstream_resp, model: str):
 
     # Block tracking — we open blocks lazily so tool-only responses don't emit
     # a spurious empty text block that confuses strict clients.
-    text_block_idx: Optional[int] = None
+    text_block_idx: int | None = None
     # oai_tool_index -> {"anthr_idx": int, "open": bool}
     tool_blocks: dict = {}
     next_idx = 0

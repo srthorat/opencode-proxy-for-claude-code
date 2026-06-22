@@ -10,10 +10,10 @@ emitted Anthropic SSE event sequence.  Covers:
 """
 
 import json
+
 import pytest
 
 from conversion.streaming import _openai_stream_to_anthropic
-
 
 # ---------------------------------------------------------------------------
 # Helpers

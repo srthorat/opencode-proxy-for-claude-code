@@ -1,11 +1,10 @@
 import logging
-from typing import Optional
 
 import httpx
 
 logger = logging.getLogger("opencode-proxy")
 
-_client: Optional[httpx.AsyncClient] = None
+_client: httpx.AsyncClient | None = None
 
 
 async def get_client() -> httpx.AsyncClient:

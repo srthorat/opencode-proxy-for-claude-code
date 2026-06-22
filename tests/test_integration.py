@@ -13,12 +13,10 @@ Covers:
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 
 # Import the FastAPI app — main.py registers all routes.
 from main import app
-
 
 # ---------------------------------------------------------------------------
 # Shared test client helper

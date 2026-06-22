@@ -4,11 +4,9 @@ Exercises path rewriting, /v1 deduplication, and query-string stripping in
 isolation by constructing a minimal RequestContext and asserting ctx.target_url.
 """
 
-import pytest
 
 from context import RequestContext
 from forward import _build_target_url
-
 
 # ---------------------------------------------------------------------------
 # Helper

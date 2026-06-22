@@ -7,12 +7,11 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from auth import check_auth
 from client import close_client
-from config import UPSTREAM_URL, PORT
+from config import PORT, PROXY_API_KEY, UPSTREAM_URL
 from forward import forward_request
 from observability.stats import snapshot
-from auth import check_auth
-from config import PROXY_API_KEY
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("opencode-proxy")

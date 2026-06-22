@@ -1,6 +1,5 @@
 import hmac
 import logging
-from typing import Optional
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -10,7 +9,7 @@ from config import PROXY_API_KEY
 logger = logging.getLogger("opencode-proxy")
 
 
-def check_auth(request: Request) -> Optional[JSONResponse]:
+def check_auth(request: Request) -> JSONResponse | None:
     """Return a 401 JSONResponse if inbound auth fails, or None to allow through.
 
     Only active when PROXY_API_KEY is configured.
