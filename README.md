@@ -298,3 +298,10 @@ sanitization.py  Message cleaner (strips thinking blocks, fixes tool results)
 conversion/      Anthropic ↔ OpenAI protocol translation
 models.json      Model routing config (URL, key, fallbacks per model)
 ```
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
