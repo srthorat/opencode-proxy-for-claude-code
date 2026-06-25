@@ -73,30 +73,38 @@ CODER_MAP_GO: dict[str, str] = {
 
 # Go-all tier includes all models, assigning GLM-5.2 to general and GLM-5.1 to fast
 CODER_MAP_GO_ALL: dict[str, str] = {
-    # 14 Detailed Classifier Category Mappings
-    "general_glm_latest": "glm-5.2",
-    "general_glm_alt":    "glm-5.1",
-    "code_latest":         "kimi-k2.7",
-    "code_alt":            "kimi-k2.6",
-    "reasoning_latest":    "deepseek-v4-pro",
-    "fast_deepseek":       "deepseek-v4-flash",
-    "general_mimo":        "mimo-v2.5",
-    "agent_mimo":          "mimo-v2.5-pro",
-    "long_latest":         "minimax-m3",
-    "long_alt":            "minimax-m2.7",
-    "long_basic":          "minimax-m2.5",
-    "general_qwen":        "qwen3.7-max",
-    "creative_qwen":       "qwen3.7-plus",
-    "creative_qwen_alt":   "qwen3.6-plus",
+    # Level-based category mappings to cover all 14 models
+    "code:3":            "kimi-k2.7",
+    "code:2":            "kimi-k2.6",
 
-    # Compatibility Category Mappings (for keyword fallback or forced override fallback)
-    "code":                "kimi-k2.7",
-    "reasoning":           "deepseek-v4-pro",
-    "long":                "minimax-m3",
-    "creative":            "qwen3.7-plus",
-    "agent":               "mimo-v2.5-pro",
-    "general":             "glm-5.2",
-    "fast":                "glm-5.1",
+    "reasoning:3":       "deepseek-v4-pro",
+    "reasoning:2":       "deepseek-v4-flash",
+
+    "long:3":            "minimax-m3",
+    "long:2":            "minimax-m2.7",
+    "long:1":            "minimax-m2.5",
+
+    "creative:3":        "qwen3.7-plus",
+    "creative:2":        "qwen3.6-plus",
+
+    "agent:3":           "mimo-v2.5-pro",
+    "agent:2":           "mimo-v2.5",
+
+    "general:3":         "qwen3.7-max",
+    "general:2":         "glm-5.2",
+    "general:1":         "glm-5.1",
+
+    "fast:3":            "deepseek-v4-flash",
+    "fast:2":            "glm-5.1",
+
+    # Category fallbacks (for compatibility or keyword fallbacks)
+    "code":              "kimi-k2.7",
+    "reasoning":         "deepseek-v4-pro",
+    "long":              "minimax-m3",
+    "creative":          "qwen3.7-plus",
+    "agent":             "mimo-v2.5-pro",
+    "general":           "qwen3.7-max",
+    "fast":              "deepseek-v4-flash",
 }
 
 

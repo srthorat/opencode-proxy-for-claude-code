@@ -22,13 +22,13 @@ logger = logging.getLogger("opencode-proxy")
 # P1 #7: In-process classifier result cache
 # ---------------------------------------------------------------------------
 
-_clf_cache: dict[str, tuple[str, str]] = {}
+_clf_cache: dict[str, tuple[str, str, int]] = {}
 _CLF_CACHE_MAX = 256
 
 
-CLASSIFIER_SYSTEM_7 = """You are a query router. Reply with JSON only — no explanation, no markdown.
+CLASSIFIER_SYSTEM = """You are a query router. Reply with JSON only — no explanation, no markdown.
 
-Pick tier and category:
+Pick tier, category, and level:
   tier "free"  → trivial or simple tasks only
   tier "go"    → everything else
 
@@ -42,35 +42,13 @@ Categories (pick exactly one):
   agent     = multi-step pipelines, automation plans, tool-use workflows
   general   = Q&A, explanations, comparisons not covered above
 
-Output format (JSON, nothing else):
-{"tier":"free","category":"trivial"}"""
-
-CLASSIFIER_SYSTEM_14 = """You are a query router. Reply with JSON only — no explanation, no markdown.
-
-Pick tier and category:
-  tier "free"  → trivial or simple tasks only
-  tier "go"    → everything else
-
-Categories (pick exactly one):
-  trivial            = greetings, yes/no, one-word answers, fill-in-blank
-  simple             = basic code under 20 lines, single function, easy fix
-  code_latest        = complex algorithms, system programming, multi-file debugging (highly complex)
-  code_alt           = standard code writing, short scripts, code explanations (moderate complexity)
-  reasoning_latest   = hard math, logic proofs, complex architecture trade-offs
-  fast_deepseek      = quick fact checking, quick reasoning, short logic queries
-  long_latest        = summarize large files/documents, output >1000 words, deep context
-  long_alt           = summarize medium files/documents, output 500-1000 words
-  long_basic         = summarize small files/documents, output 200-500 words
-  general_qwen       = standard high-quality general Q&A, default general queries
-  creative_qwen      = blog posts, creative writing, translation, marketing copy (full-length)
-  creative_qwen_alt  = short writing, alternate creative queries
-  agent_mimo         = multi-step workflows, automation plans, automated agent tasks
-  general_mimo       = standard conversational Q&A, basic facts, simple follow-ups
-  general_glm_latest = default general-purpose queries, state-of-the-art general tasks
-  general_glm_alt    = fast/lightweight general queries, simple explanations
+Levels (pick exactly one based on task complexity):
+  3 = extremely complex, flagship performance required, or primary choice
+  2 = standard complexity, intermediate performance required, or secondary choice
+  1 = low/basic complexity, simple fallback performance required
 
 Output format (JSON, nothing else):
-{"tier":"free","category":"trivial"}"""
+{"tier":"free","category":"trivial","level":3}"""
 
 
 def _extract_text(messages: list) -> str:
@@ -266,7 +244,7 @@ async def auto_select_model(
     """
     text = _extract_text(messages)
     num_turns = len(messages)
-    tier, category = "go", "general"  # safe default
+    tier, category, level = "go", "general", 3  # safe default
     method = "keyword"
 
     # ── Agent mode detection ─────────────────────────────────────────────────
@@ -327,11 +305,10 @@ async def auto_select_model(
     # ── Stage 1: LLM classification via north-mini-code-free ────────────────
     # P1 #7: Check the in-process cache before making an LLM call.
     text_short = text[:600]
-    _mode_prefix = "goall:" if forced_tier == "go-all" else "normal:"
-    cache_key = hashlib.md5((_mode_prefix + text_short).encode(), usedforsecurity=False).hexdigest()
+    cache_key = hashlib.md5(text_short.encode(), usedforsecurity=False).hexdigest()
 
     if cache_key in _clf_cache:
-        tier, category = _clf_cache[cache_key]
+        tier, category, level = _clf_cache[cache_key]
         method = "cache"
     else:
         try:
@@ -350,7 +327,6 @@ async def auto_select_model(
             # P1 #5: Reuse the module-level shared client instead of creating a
             # fresh httpx.AsyncClient for every routing decision.
             client = await get_client()
-            clf_system = CLASSIFIER_SYSTEM_14 if forced_tier == "go-all" else CLASSIFIER_SYSTEM_7
             resp = await client.post(
                 classifier_url,
                 headers={
@@ -360,7 +336,7 @@ async def auto_select_model(
                 json={
                     "model": classifier,
                     "messages": [
-                        {"role": "system", "content": clf_system},
+                        {"role": "system", "content": CLASSIFIER_SYSTEM},
                         {"role": "user",   "content": text_short},
                     ],
                     "max_tokens": 30,
@@ -377,12 +353,13 @@ async def auto_select_model(
                     parsed = json.loads(raw[start:end + 1])
                     tier     = parsed.get("tier", tier).strip().lower()
                     category = parsed.get("category", category).strip().lower()
+                    level    = int(parsed.get("level", 3))
                     method   = "llm"
                     # P1 #7: Store successful classification in cache.
                     if len(_clf_cache) >= _CLF_CACHE_MAX:
                         oldest = next(iter(_clf_cache))
                         del _clf_cache[oldest]
-                    _clf_cache[cache_key] = (tier, category)
+                    _clf_cache[cache_key] = (tier, category, level)
         except Exception as exc:
             logger.debug("classifier failed, using keyword fallback: %s", exc)
             # method stays "keyword" — the block below will call _keyword_fallback once
@@ -398,7 +375,8 @@ async def auto_select_model(
     if tier == "free":
         chosen = CODER_MAP_FREE.get(category, CODER_MAP_FREE["simple"])
     elif tier == "go-all":
-        chosen = CODER_MAP_GO_ALL.get(category, CODER_MAP_GO_ALL["general"])
+        key_with_level = f"{category}:{level}"
+        chosen = CODER_MAP_GO_ALL.get(key_with_level, CODER_MAP_GO_ALL.get(category, CODER_MAP_GO_ALL["general"]))
     else:
         chosen = CODER_MAP_GO.get(category, CODER_MAP_GO["general"])
 
