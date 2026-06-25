@@ -26,7 +26,7 @@ _clf_cache: dict[str, tuple[str, str]] = {}
 _CLF_CACHE_MAX = 256
 
 
-CLASSIFIER_SYSTEM = """You are a query router. Reply with JSON only — no explanation, no markdown.
+CLASSIFIER_SYSTEM_7 = """You are a query router. Reply with JSON only — no explanation, no markdown.
 
 Pick tier and category:
   tier "free"  → trivial or simple tasks only
@@ -41,6 +41,33 @@ Categories (pick exactly one):
   creative  = blog posts, stories, poems, marketing copy
   agent     = multi-step pipelines, automation plans, tool-use workflows
   general   = Q&A, explanations, comparisons not covered above
+
+Output format (JSON, nothing else):
+{"tier":"free","category":"trivial"}"""
+
+CLASSIFIER_SYSTEM_14 = """You are a query router. Reply with JSON only — no explanation, no markdown.
+
+Pick tier and category:
+  tier "free"  → trivial or simple tasks only
+  tier "go"    → everything else
+
+Categories (pick exactly one):
+  trivial            = greetings, yes/no, one-word answers, fill-in-blank
+  simple             = basic code under 20 lines, single function, easy fix
+  code_latest        = complex algorithms, system programming, multi-file debugging (highly complex)
+  code_alt           = standard code writing, short scripts, code explanations (moderate complexity)
+  reasoning_latest   = hard math, logic proofs, complex architecture trade-offs
+  fast_deepseek      = quick fact checking, quick reasoning, short logic queries
+  long_latest        = summarize large files/documents, output >1000 words, deep context
+  long_alt           = summarize medium files/documents, output 500-1000 words
+  long_basic         = summarize small files/documents, output 200-500 words
+  general_qwen       = standard high-quality general Q&A, default general queries
+  creative_qwen      = blog posts, creative writing, translation, marketing copy (full-length)
+  creative_qwen_alt  = short writing, alternate creative queries
+  agent_mimo         = multi-step workflows, automation plans, automated agent tasks
+  general_mimo       = standard conversational Q&A, basic facts, simple follow-ups
+  general_glm_latest = default general-purpose queries, state-of-the-art general tasks
+  general_glm_alt    = fast/lightweight general queries, simple explanations
 
 Output format (JSON, nothing else):
 {"tier":"free","category":"trivial"}"""
@@ -300,7 +327,8 @@ async def auto_select_model(
     # ── Stage 1: LLM classification via north-mini-code-free ────────────────
     # P1 #7: Check the in-process cache before making an LLM call.
     text_short = text[:600]
-    cache_key = hashlib.md5(text_short.encode(), usedforsecurity=False).hexdigest()
+    _mode_prefix = "goall:" if forced_tier == "go-all" else "normal:"
+    cache_key = hashlib.md5((_mode_prefix + text_short).encode(), usedforsecurity=False).hexdigest()
 
     if cache_key in _clf_cache:
         tier, category = _clf_cache[cache_key]
@@ -322,6 +350,7 @@ async def auto_select_model(
             # P1 #5: Reuse the module-level shared client instead of creating a
             # fresh httpx.AsyncClient for every routing decision.
             client = await get_client()
+            clf_system = CLASSIFIER_SYSTEM_14 if forced_tier == "go-all" else CLASSIFIER_SYSTEM_7
             resp = await client.post(
                 classifier_url,
                 headers={
@@ -331,7 +360,7 @@ async def auto_select_model(
                 json={
                     "model": classifier,
                     "messages": [
-                        {"role": "system", "content": CLASSIFIER_SYSTEM},
+                        {"role": "system", "content": clf_system},
                         {"role": "user",   "content": text_short},
                     ],
                     "max_tokens": 30,

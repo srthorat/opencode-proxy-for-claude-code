@@ -73,30 +73,30 @@ CODER_MAP_GO: dict[str, str] = {
 
 # Go-all tier includes all models, assigning GLM-5.2 to general and GLM-5.1 to fast
 CODER_MAP_GO_ALL: dict[str, str] = {
-    # Classifier Category Mappings
-    "code":      "kimi-k2.7",
-    "reasoning": "deepseek-v4-pro",
-    "long":      "minimax-m3",
-    "creative":  "qwen3.7-plus",
-    "agent":     "mimo-v2.5-pro",
-    "general":   "glm-5.2",
-    "fast":      "glm-5.1",
+    # 14 Detailed Classifier Category Mappings
+    "general_glm_latest": "glm-5.2",
+    "general_glm_alt":    "glm-5.1",
+    "code_latest":         "kimi-k2.7",
+    "code_alt":            "kimi-k2.6",
+    "reasoning_latest":    "deepseek-v4-pro",
+    "fast_deepseek":       "deepseek-v4-flash",
+    "general_mimo":        "mimo-v2.5",
+    "agent_mimo":          "mimo-v2.5-pro",
+    "long_latest":         "minimax-m3",
+    "long_alt":            "minimax-m2.7",
+    "long_basic":          "minimax-m2.5",
+    "general_qwen":        "qwen3.7-max",
+    "creative_qwen":       "qwen3.7-plus",
+    "creative_qwen_alt":   "qwen3.6-plus",
 
-    # All 14 supported Go models mapped one-by-one
-    "glm-5.2":           "glm-5.2",
-    "glm-5.1":           "glm-5.1",
-    "kimi-k2.7":         "kimi-k2.7",
-    "kimi-k2.6":         "kimi-k2.6",
-    "deepseek-v4-pro":   "deepseek-v4-pro",
-    "deepseek-v4-flash": "deepseek-v4-flash",
-    "mimo-v2.5":         "mimo-v2.5",
-    "mimo-v2.5-pro":     "mimo-v2.5-pro",
-    "minimax-m3":        "minimax-m3",
-    "minimax-m2.7":      "minimax-m2.7",
-    "minimax-m2.5":      "minimax-m2.5",
-    "qwen3.7-max":       "qwen3.7-max",
-    "qwen3.7-plus":      "qwen3.7-plus",
-    "qwen3.6-plus":      "qwen3.6-plus",
+    # Compatibility Category Mappings (for keyword fallback or forced override fallback)
+    "code":                "kimi-k2.7",
+    "reasoning":           "deepseek-v4-pro",
+    "long":                "minimax-m3",
+    "creative":            "qwen3.7-plus",
+    "agent":               "mimo-v2.5-pro",
+    "general":             "glm-5.2",
+    "fast":                "glm-5.1",
 }
 
 
