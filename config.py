@@ -62,49 +62,49 @@ CODER_MAP_FREE: dict[str, str] = {
 #                                        deepseek-v4-flash, mimo-v2.5, mimo-v2.5-pro,
 #                                        glm-5.2, glm-5.1
 CODER_MAP_GO: dict[str, str] = {
-    "code":      "kimi-k2.7",         # complex code, algorithms, multi-file debug
-    "reasoning": "deepseek-v4-pro",   # architecture, math, analysis, step-by-step
-    "long":      "minimax-m3",        # large context, documents, summarization
-    "creative":  "qwen3.7-plus",      # writing, creative, translation
-    "agent":     "mimo-v2.5-pro",     # multi-step agentic, tool-use, planning
-    "general":   "qwen3.7-max",       # everything else — high quality default
-    "fast":      "deepseek-v4-flash", # quick go-tier tasks
+    "code":      "opencode-go/kimi-k2.7-code",   # complex code, algorithms, multi-file debug
+    "reasoning": "opencode-go/deepseek-v4-pro",   # architecture, math, analysis, step-by-step
+    "long":      "opencode-go/minimax-m3",        # large context, documents, summarization
+    "creative":  "opencode-go/qwen3.7-plus",      # writing, creative, translation
+    "agent":     "opencode-go/mimo-v2.5-pro",     # multi-step agentic, tool-use, planning
+    "general":   "opencode-go/qwen3.7-max",       # everything else — high quality default
+    "fast":      "opencode-go/deepseek-v4-flash", # quick go-tier tasks
 }
 
 # Go-all tier includes all models, assigning GLM-5.2 to general and GLM-5.1 to fast
 CODER_MAP_GO_ALL: dict[str, str] = {
     # Level-based category mappings to cover all 14 models
-    "code:3":            "kimi-k2.7",
-    "code:2":            "kimi-k2.6",
+    "code:3":            "opencode-go/kimi-k2.7-code",
+    "code:2":            "opencode-go/kimi-k2.6",
 
-    "reasoning:3":       "deepseek-v4-pro",
-    "reasoning:2":       "deepseek-v4-flash",
+    "reasoning:3":       "opencode-go/deepseek-v4-pro",
+    "reasoning:2":       "opencode-go/deepseek-v4-flash",
 
-    "long:3":            "minimax-m3",
-    "long:2":            "minimax-m2.7",
-    "long:1":            "minimax-m2.5",
+    "long:3":            "opencode-go/minimax-m3",
+    "long:2":            "opencode-go/minimax-m2.7",
+    "long:1":            "opencode-go/minimax-m2.5",
 
-    "creative:3":        "qwen3.7-plus",
-    "creative:2":        "qwen3.6-plus",
+    "creative:3":        "opencode-go/qwen3.7-plus",
+    "creative:2":        "opencode-go/qwen3.6-plus",
 
-    "agent:3":           "mimo-v2.5-pro",
-    "agent:2":           "mimo-v2.5",
+    "agent:3":           "opencode-go/mimo-v2.5-pro",
+    "agent:2":           "opencode-go/mimo-v2.5",
 
-    "general:3":         "qwen3.7-max",
-    "general:2":         "glm-5.2",
-    "general:1":         "glm-5.1",
+    "general:3":         "opencode-go/qwen3.7-max",
+    "general:2":         "opencode-go/glm-5.2",
+    "general:1":         "opencode-go/glm-5.1",
 
-    "fast:3":            "deepseek-v4-flash",
-    "fast:2":            "glm-5.1",
+    "fast:3":            "opencode-go/deepseek-v4-flash",
+    "fast:2":            "opencode-go/glm-5.1",
 
     # Category fallbacks (for compatibility or keyword fallbacks)
-    "code":              "kimi-k2.7",
-    "reasoning":         "deepseek-v4-pro",
-    "long":              "minimax-m3",
-    "creative":          "qwen3.7-plus",
-    "agent":             "mimo-v2.5-pro",
-    "general":           "qwen3.7-max",
-    "fast":              "deepseek-v4-flash",
+    "code":              "opencode-go/kimi-k2.7-code",
+    "reasoning":         "opencode-go/deepseek-v4-pro",
+    "long":              "opencode-go/minimax-m3",
+    "creative":          "opencode-go/qwen3.7-plus",
+    "agent":             "opencode-go/mimo-v2.5-pro",
+    "general":           "opencode-go/qwen3.7-max",
+    "fast":              "opencode-go/deepseek-v4-flash",
 }
 
 
@@ -115,4 +115,6 @@ CODER_MAP_GO_ALL: dict[str, str] = {
 _ANTHROPIC_COMPAT_MODELS = {
     "minimax-m3", "minimax-m2.7", "minimax-m2.5",
     "qwen3.7-max", "qwen3.7-plus", "qwen3.6-plus",
+    "opencode-go/minimax-m3", "opencode-go/minimax-m2.7", "opencode-go/minimax-m2.5",
+    "opencode-go/qwen3.7-max", "opencode-go/qwen3.7-plus", "opencode-go/qwen3.6-plus",
 }

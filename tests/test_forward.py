@@ -5,6 +5,8 @@ isolation by constructing a minimal RequestContext and asserting ctx.target_url.
 """
 
 
+from typing import Any
+
 from context import RequestContext
 from forward import _build_target_url
 
@@ -14,7 +16,7 @@ from forward import _build_target_url
 
 def make_ctx(**overrides) -> RequestContext:
     """Return a minimal RequestContext suitable for _build_target_url tests."""
-    defaults = dict(
+    defaults: dict[str, Any] = dict(
         method="POST",
         path="/v1/messages",
         query="",

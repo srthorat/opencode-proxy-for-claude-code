@@ -278,9 +278,21 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
             return JSONResponse({"error": "upstream request failed"}, status_code=502)
 
         # Retryable upstream error — try next fallback if available
-        if upstream_resp.status_code in _RETRYABLE_STATUS and attempt < len(candidates) - 1:
+        is_retryable = upstream_resp.status_code in _RETRYABLE_STATUS
+        err_snippet = ""
+        if not is_retryable and upstream_resp.status_code in (400, 401, 403, 404) and attempt < len(candidates) - 1:
             try:
-                err_snippet = (await upstream_resp.aread()).decode("utf-8", errors="replace")[:200]
+                body_bytes = await upstream_resp.aread()
+                if b"ModelError" in body_bytes or b"not supported" in body_bytes or b"not found" in body_bytes:
+                    is_retryable = True
+                    err_snippet = body_bytes.decode("utf-8", errors="replace")[:200]
+            except Exception:
+                pass
+
+        if is_retryable and attempt < len(candidates) - 1:
+            try:
+                if not err_snippet:
+                    err_snippet = (await upstream_resp.aread()).decode("utf-8", errors="replace")[:200]
                 logger.warning(
                     "Upstream %d on attempt %d (%s) — trying fallback: %s",
                     upstream_resp.status_code, attempt, model, err_snippet,

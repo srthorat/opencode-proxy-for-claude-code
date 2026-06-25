@@ -172,7 +172,17 @@ def resolve_model_config(name: str):
         return upstream_model, DIRECT_URL or UPSTREAM_URL, DIRECT_KEY or UPSTREAM_API_KEY, "direct"
 
     entry = MODEL_MAP.get(key)
+    if entry is None:
+        if key.startswith("opencode-go/"):
+            alt_key = key[len("opencode-go/"):]
+        else:
+            alt_key = f"opencode-go/{key}"
+        entry = MODEL_MAP.get(alt_key)
+
     upstream_model = key.replace(" ", "-")
+    if upstream_model.startswith("opencode-go/"):
+        upstream_model = upstream_model[len("opencode-go/"):]
+
     upstream_url = UPSTREAM_URL
     upstream_api_key = UPSTREAM_API_KEY
     role = None
@@ -183,6 +193,8 @@ def resolve_model_config(name: str):
     # if mapping is a simple string, use it as model name
     if isinstance(entry, str):
         upstream_model = entry
+        if upstream_model.startswith("opencode-go/"):
+            upstream_model = upstream_model[len("opencode-go/"):]
         return upstream_model, upstream_url, upstream_api_key, role
 
     # otherwise expect a dict
@@ -193,6 +205,8 @@ def resolve_model_config(name: str):
         model_val = entry.get("model")
         if isinstance(model_val, str) and model_val:
             upstream_model = model_val
+            if upstream_model.startswith("opencode-go/"):
+                upstream_model = upstream_model[len("opencode-go/"):]
 
         # url handling: allow literal placeholders
         url_val = entry.get("url")

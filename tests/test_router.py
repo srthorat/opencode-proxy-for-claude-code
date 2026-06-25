@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from config import CODER_MAP_FREE, CODER_MAP_GO, CODER_MAP_GO_ALL
-from router import _keyword_fallback, auto_select_model, map_claude_model_name
+from router import _keyword_fallback, auto_select_model, map_claude_model_name, resolve_model_config
 
 # ---------------------------------------------------------------------------
 # _keyword_fallback
@@ -148,7 +148,7 @@ class TestMapClaudeModelName:
         assert map_claude_model_name("go-auto") == "go-auto"
         assert map_claude_model_name("free-auto") == "free-auto"
 
-    def test_non_string_returns_unchanged(self):
+    def test_non_string_returns_unchanged(self) -> None:
         assert map_claude_model_name(None) is None  # type: ignore[arg-type]
 
     def test_model_in_model_map_not_remapped(self, monkeypatch):
@@ -411,3 +411,29 @@ class TestAutoSelectModel:
 
         # LLM should only have been called once (second call hits cache)
         assert mock_client.post.await_count == 1
+
+
+# ---------------------------------------------------------------------------
+# TestResolveModelConfig
+# ---------------------------------------------------------------------------
+
+class TestResolveModelConfig:
+    def test_resolve_with_opencode_go_prefix_directly(self):
+        # Resolve a model with the prefix explicitly configured
+        upstream, url, key, role = resolve_model_config("opencode-go/kimi-k2.7-code")
+        assert upstream == "kimi-k2.7-code"
+
+    def test_resolve_without_opencode_go_prefix_fallback(self):
+        # Resolve a model without the prefix when the key in models.json is prefixed
+        upstream, url, key, role = resolve_model_config("kimi-k2.7-code")
+        assert upstream == "kimi-k2.7-code"
+
+    def test_resolve_with_opencode_go_prefix_fallback_for_non_prefixed_config(self):
+        # Resolve a model with the prefix when the key in models.json is NOT prefixed
+        upstream, url, key, role = resolve_model_config("opencode-go/big-pickle")
+        assert upstream == "big-pickle"
+
+    def test_resolve_with_opencode_go_prefix_fallback_non_existent(self):
+        # Resolve a non-existent model with/without prefix should strip prefix in resolved model
+        upstream, url, key, role = resolve_model_config("opencode-go/non-existent-model")
+        assert upstream == "non-existent-model"
