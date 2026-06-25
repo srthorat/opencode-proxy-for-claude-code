@@ -190,7 +190,7 @@ Set `"model"` in `~/.claude/settings.json`:
 
 **How `go-auto` works:** Each request is classified by task type (code, reasoning, long context, creative, agent) and routed to the best-suited model. A coding question goes to `kimi-k2.7`, an architecture discussion goes to `deepseek-v4-pro`, a long document summary goes to `minimax-m3`.
 
-**How `go-all` works:** Similar to `go-auto`, but utilizes the full pool of all 14 supported models, mapping `glm-5.2` as the general default and `glm-5.1` as the fast option, with fallbacks traversing the older/alternate model versions.
+**How `go-all` works:** Similar to `go-auto`, but utilizes the full pool of all 14 supported models by classifying the query into a task category and a complexity level (3 for flagship models, 2 for intermediate/alternate models like `glm-5.2` and `kimi-k2.6`, and 1 for simple fallbacks like `glm-5.1` and `minimax-m2.5`).
 
 **Fallback chains:** If a model returns an error (rate limit, timeout, 5xx), the proxy automatically retries with the next model in the chain — no interruption to your session.
 
