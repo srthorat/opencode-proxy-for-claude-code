@@ -73,6 +73,7 @@ CODER_MAP_GO: dict[str, str] = {
 
 # Go-all tier includes all models, assigning GLM-5.2 to general and GLM-5.1 to fast
 CODER_MAP_GO_ALL: dict[str, str] = {
+    # Classifier Category Mappings
     "code":      "kimi-k2.7",
     "reasoning": "deepseek-v4-pro",
     "long":      "minimax-m3",
@@ -80,6 +81,22 @@ CODER_MAP_GO_ALL: dict[str, str] = {
     "agent":     "mimo-v2.5-pro",
     "general":   "glm-5.2",
     "fast":      "glm-5.1",
+
+    # All 14 supported Go models mapped one-by-one
+    "glm-5.2":           "glm-5.2",
+    "glm-5.1":           "glm-5.1",
+    "kimi-k2.7":         "kimi-k2.7",
+    "kimi-k2.6":         "kimi-k2.6",
+    "deepseek-v4-pro":   "deepseek-v4-pro",
+    "deepseek-v4-flash": "deepseek-v4-flash",
+    "mimo-v2.5":         "mimo-v2.5",
+    "mimo-v2.5-pro":     "mimo-v2.5-pro",
+    "minimax-m3":        "minimax-m3",
+    "minimax-m2.7":      "minimax-m2.7",
+    "minimax-m2.5":      "minimax-m2.5",
+    "qwen3.7-max":       "qwen3.7-max",
+    "qwen3.7-plus":      "qwen3.7-plus",
+    "qwen3.6-plus":      "qwen3.6-plus",
 }
 
 
