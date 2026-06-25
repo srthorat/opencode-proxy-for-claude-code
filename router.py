@@ -8,6 +8,7 @@ from client import get_client
 from config import (
     CODER_MAP_FREE,
     CODER_MAP_GO,
+    CODER_MAP_GO_ALL,
     DIRECT_KEY,
     DIRECT_URL,
     MODEL_MAP,
@@ -260,6 +261,11 @@ async def auto_select_model(
                 logger.info(
                     "auto-router: agent mode (%d tool blocks) → %s", _tool_block_count, chosen
                 )
+            elif _eff_tier == "go-all":
+                chosen = CODER_MAP_GO_ALL["agent"]
+                logger.info(
+                    "auto-router: agent mode (%d tool blocks) → %s", _tool_block_count, chosen
+                )
             else:
                 # free tier has no dedicated agent model — use best free option
                 chosen = CODER_MAP_FREE["general"]
@@ -283,6 +289,10 @@ async def auto_select_model(
         if forced_tier == "free":
             chosen = CODER_MAP_FREE.get("simple", CODER_MAP_FREE["simple"])
             logger.info("auto-router[precheck]: forced_tier=free category=code → %s", chosen)
+            return chosen
+        elif forced_tier == "go-all":
+            chosen = CODER_MAP_GO_ALL["code"]
+            logger.info("auto-router[precheck]: tier=go-all category=code → %s", chosen)
             return chosen
         logger.info("auto-router[precheck]: tier=go category=code → kimi-k2.7-code")
         return CODER_MAP_GO["code"]
@@ -358,6 +368,8 @@ async def auto_select_model(
     # ── Stage 2: pick model from the right map ───────────────────────────────
     if tier == "free":
         chosen = CODER_MAP_FREE.get(category, CODER_MAP_FREE["simple"])
+    elif tier == "go-all":
+        chosen = CODER_MAP_GO_ALL.get(category, CODER_MAP_GO_ALL["general"])
     else:
         chosen = CODER_MAP_GO.get(category, CODER_MAP_GO["general"])
 

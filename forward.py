@@ -75,10 +75,15 @@ async def _sanitize_and_route(ctx: RequestContext) -> None:
                         incoming_model = mapped
                         _model_lower = mapped
 
-                # Dynamic routing: auto / free-auto / go-auto
-                if _model_lower in ("auto", "free-auto", "go-auto"):
+                # Dynamic routing: auto / free-auto / go-auto / go-all / go-all-auto
+                if _model_lower in ("auto", "free-auto", "go-auto", "go-all", "go-all-auto"):
                     messages = payload.get("messages", [])
-                    _forced_tier = {"free-auto": "free", "go-auto": "go"}.get(_model_lower)
+                    _forced_tier = {
+                        "free-auto": "free",
+                        "go-auto": "go",
+                        "go-all": "go-all",
+                        "go-all-auto": "go-all",
+                    }.get(_model_lower)
                     _has_tools = bool(payload.get("tools"))  # agent mode signal
                     incoming_model = await auto_select_model(
                         messages, forced_tier=_forced_tier, has_tools=_has_tools

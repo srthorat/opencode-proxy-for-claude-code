@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from config import CODER_MAP_FREE, CODER_MAP_GO
+from config import CODER_MAP_FREE, CODER_MAP_GO, CODER_MAP_GO_ALL
 from router import _keyword_fallback, auto_select_model, map_claude_model_name
 
 # ---------------------------------------------------------------------------
@@ -288,7 +288,6 @@ class TestAutoSelectModel:
                 forced_tier="free",
             )
         assert result in CODER_MAP_FREE.values()
-
     @pytest.mark.asyncio
     async def test_forced_tier_go_always_picks_go_model(self):
         """forced_tier='go' must pick from CODER_MAP_GO."""
@@ -301,6 +300,18 @@ class TestAutoSelectModel:
                 forced_tier="go",
             )
         assert result in CODER_MAP_GO.values()
+    @pytest.mark.asyncio
+    async def test_forced_tier_go_all_always_picks_go_all_model(self):
+        """forced_tier='go-all' must pick from CODER_MAP_GO_ALL."""
+        mock_client = MagicMock()
+        mock_client.post = AsyncMock(side_effect=Exception("no network"))
+
+        with patch("router.get_client", AsyncMock(return_value=mock_client)):
+            result = await auto_select_model(
+                [{"role": "user", "content": "Hello!"}],
+                forced_tier="go-all",
+            )
+        assert result in CODER_MAP_GO_ALL.values()
 
     @pytest.mark.asyncio
     async def test_forced_tier_free_overrides_llm_go_classification(self):

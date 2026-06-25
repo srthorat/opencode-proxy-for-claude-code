@@ -71,6 +71,18 @@ CODER_MAP_GO: dict[str, str] = {
     "fast":      "deepseek-v4-flash", # quick go-tier tasks
 }
 
+# Go-all tier includes all models, assigning GLM-5.2 to general and GLM-5.1 to fast
+CODER_MAP_GO_ALL: dict[str, str] = {
+    "code":      "kimi-k2.7",
+    "reasoning": "deepseek-v4-pro",
+    "long":      "minimax-m3",
+    "creative":  "qwen3.7-plus",
+    "agent":     "mimo-v2.5-pro",
+    "general":   "glm-5.2",
+    "fast":      "glm-5.1",
+}
+
+
 # ---------------------------------------------------------------------------
 # Protocol detection
 # ---------------------------------------------------------------------------
