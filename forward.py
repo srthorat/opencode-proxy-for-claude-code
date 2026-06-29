@@ -75,11 +75,13 @@ async def _sanitize_and_route(ctx: RequestContext) -> None:
                         incoming_model = mapped
                         _model_lower = mapped
 
-                # Dynamic routing: auto / free-auto / go-auto / go-all / go-all-auto
-                if _model_lower in ("auto", "free-auto", "go-auto", "go-all", "go-all-auto"):
+                # Dynamic routing: auto / free-auto / free-global / free-global-auto / go-auto / go-all / go-all-auto
+                if _model_lower in ("auto", "free-auto", "free-global", "free-global-auto", "go-auto", "go-all", "go-all-auto"):
                     messages = payload.get("messages", [])
                     _forced_tier = {
                         "free-auto": "free",
+                        "free-global": "free-global",
+                        "free-global-auto": "free-global",
                         "go-auto": "go",
                         "go-all": "go-all",
                         "go-all-auto": "go-all",

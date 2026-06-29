@@ -183,6 +183,7 @@ Set `"model"` in `~/.claude/settings.json`:
 |---|---|---|
 | `go-all` | Proxy picks the best model from the full pool (includes GLM) | Paid |
 | `go-auto` | Proxy picks the best paid model for each task | Paid |
+| `free-global-auto` / `free-global` | Proxy picks the best free model from global providers (Gemma, Cohere) | Free |
 | `free-auto` | Proxy picks the best free model for each task | Free |
 | `claude-haiku-*` | Same as `free-auto` | Free |
 | `claude-sonnet-*`, `claude-opus-*` | Same as `go-auto` | Paid |
@@ -191,6 +192,11 @@ Set `"model"` in `~/.claude/settings.json`:
 **How `go-auto` works:** Each request is classified by task type (code, reasoning, long context, creative, agent) and routed to the best-suited model. A coding question goes to `kimi-k2.7`, an architecture discussion goes to `deepseek-v4-pro`, a long document summary goes to `minimax-m3`.
 
 **How `go-all` works:** Similar to `go-auto`, but utilizes the full pool of all 14 supported models by classifying the query into a task category and a complexity level (3 for flagship models, 2 for intermediate/alternate models like `glm-5.2` and `kimi-k2.6`, and 1 for simple fallbacks like `glm-5.1` and `minimax-m2.5`).
+
+**How `free-global-auto` works:** Dynamic routing for the free global tier, leveraging global open-source models:
+* Coding/Reasoning tasks route to `cohere/north-mini-code-free` (via OpenRouter)
+* Multimodal/Creative tasks route to `openrouter/free` (`openai/gpt-oss-20b:free`)
+* Image and reasoning tasks route to `google/gemma-4-31b-it` (directly via Google's API to bypass OpenRouter rate limits)
 
 **Fallback chains:** If a model returns an error (rate limit, timeout, 5xx), the proxy automatically retries with the next model in the chain — no interruption to your session.
 

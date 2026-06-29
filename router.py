@@ -7,6 +7,7 @@ from functools import lru_cache
 from client import get_client
 from config import (
     CODER_MAP_FREE,
+    CODER_MAP_FREE_GLOBAL,
     CODER_MAP_GO,
     CODER_MAP_GO_ALL,
     DIRECT_KEY,
@@ -285,6 +286,13 @@ async def auto_select_model(
                 logger.info(
                     "auto-router: agent mode (%d tool blocks) → %s", _tool_block_count, chosen
                 )
+            elif _eff_tier == "free-global":
+                chosen = CODER_MAP_FREE_GLOBAL["tier1"]
+                logger.info(
+                    "auto-router: agent mode free global tier (%d tool blocks) → %s",
+                    _tool_block_count,
+                    chosen,
+                )
             else:
                 # free tier has no dedicated agent model — use best free option
                 chosen = CODER_MAP_FREE["general"]
@@ -308,6 +316,10 @@ async def auto_select_model(
         if forced_tier == "free":
             chosen = CODER_MAP_FREE.get("simple", CODER_MAP_FREE["simple"])
             logger.info("auto-router[precheck]: forced_tier=free category=code → %s", chosen)
+            return chosen
+        elif forced_tier == "free-global":
+            chosen = CODER_MAP_FREE_GLOBAL.get("tier1", CODER_MAP_FREE_GLOBAL["tier1"])
+            logger.info("auto-router[precheck]: forced_tier=free-global category=code → %s", chosen)
             return chosen
         elif forced_tier == "go-all":
             chosen = CODER_MAP_GO_ALL["code"]
@@ -388,6 +400,8 @@ async def auto_select_model(
     # ── Stage 2: pick model from the right map ───────────────────────────────
     if tier == "free":
         chosen = CODER_MAP_FREE.get(category, CODER_MAP_FREE["simple"])
+    elif tier == "free-global":
+        chosen = CODER_MAP_FREE_GLOBAL.get(category, CODER_MAP_FREE_GLOBAL["tier1"])
     elif tier == "go-all":
         key_with_level = f"{category}:{level}"
         chosen = CODER_MAP_GO_ALL.get(key_with_level, CODER_MAP_GO_ALL.get(category, CODER_MAP_GO_ALL["general"]))

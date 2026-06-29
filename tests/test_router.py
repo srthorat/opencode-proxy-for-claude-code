@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from config import CODER_MAP_FREE, CODER_MAP_GO, CODER_MAP_GO_ALL
+from config import CODER_MAP_FREE, CODER_MAP_FREE_GLOBAL, CODER_MAP_GO, CODER_MAP_GO_ALL
 from router import _keyword_fallback, auto_select_model, map_claude_model_name, resolve_model_config
 
 # ---------------------------------------------------------------------------
@@ -373,6 +373,28 @@ class TestAutoSelectModel:
         ]
         result = await auto_select_model(messages, has_tools=True, forced_tier="free")
         assert result == CODER_MAP_FREE["general"]
+
+    @pytest.mark.asyncio
+    async def test_agent_mode_free_global_tier_picks_tier1_model(self):
+        """Agent mode + forced_tier='free-global' → CODER_MAP_FREE_GLOBAL['tier1']."""
+        messages = [
+            {
+                "role": "assistant",
+                "content": [
+                    {"type": "tool_use", "id": "t1", "name": "fn", "input": {}},
+                    {"type": "tool_use", "id": "t2", "name": "fn2", "input": {}},
+                ],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"type": "tool_result", "tool_use_id": "t1", "content": "r1"},
+                    {"type": "tool_result", "tool_use_id": "t2", "content": "r2"},
+                ],
+            },
+        ]
+        result = await auto_select_model(messages, has_tools=True, forced_tier="free-global")
+        assert result == CODER_MAP_FREE_GLOBAL["tier1"]
 
     @pytest.mark.asyncio
     async def test_single_tool_block_not_agent_mode(self):

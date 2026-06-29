@@ -54,6 +54,16 @@ CODER_MAP_FREE: dict[str, str] = {
     "general": "mimo-v2.5-free",         # free general quality option
 }
 
+# Free global tier (free-global/v1) — open-source/global providers
+CODER_MAP_FREE_GLOBAL: dict[str, str] = {
+    "tier1":           "cohere/north-mini-code-free",     # core free global tier
+    "creative":       "openrouter/free",                # creative tasks
+    "image+reasoning": "google/gemma-4-31b-it",         # image understanding + reasoning
+    "general":         "zai/glm-5.2",                   # global reasoning model
+    "long":           "opencode-go/glm-5.2",           # long text tasks
+    "reasoning":      "zai/glm-5.2",                   # reasoning tasks
+}
+
 # Go paid tier (zen/go/v1) — best-in-class per category.
 # Model IDs from https://opencode.ai/docs/go/
 # Anthropic-compat (/v1/messages):      minimax-m3, minimax-m2.7, minimax-m2.5,
@@ -83,6 +93,7 @@ CODER_MAP_GO_ALL: dict[str, str] = {
     "long:3":            "opencode-go/minimax-m3",
     "long:2":            "opencode-go/minimax-m2.7",
     "long:1":            "opencode-go/minimax-m2.5",
+    "long:0":            "opencode-go/glm-5.2",
 
     "creative:3":        "opencode-go/qwen3.7-plus",
     "creative:2":        "opencode-go/qwen3.6-plus",

@@ -1,6 +1,11 @@
 {
-  "big-pickle":            {"url": "env:OPENCODE_FREE_URL", "api_key": "env:OPENCODE_API_KEY", "role": "free_coders/trivial",             "fallbacks": ["north-mini-code-free"]},
-  "north-mini-code-free":  {"url": "env:OPENCODE_FREE_URL", "api_key": "env:OPENCODE_API_KEY", "role": "free_coders/simple+classifier",   "fallbacks": ["mimo-v2.5-free"]},
+  "big-pickle":                    {"url": "env:OPENCODE_FREE_URL", "api_key": "env:OPENCODE_API_KEY", "role": "free_coders/trivial",             "fallbacks": ["north-mini-code-free"]},
+  "north-mini-code-free":          {"url": "env:OPENCODE_FREE_URL", "api_key": "env:OPENCODE_API_KEY", "role": "free_coders/simple+classifier",   "fallbacks": ["mimo-v2.5-free"]},
+  "zai/glm-5.2":                  {"url": "https://api.z.ai/api/coding/paas/v4", "api_key": "env:ZAI_GLOBAL_API_KEY", "role": "free_global/global",           "model": "glm-5.2",          "fallbacks": ["zai/glm-5.1", "big-pickle"]},
+  "openrouter/free":              {"url": "https://openrouter.ai/api/v1", "api_key": "env:OPENROUTER_API_KEY", "role": "free_global/multimodal",         "model": "openai/gpt-oss-20b:free",                      "fallbacks": ["big-pickle"]},
+  "google/gemma-4-31b-it":       {"url": "https://generativelanguage.googleapis.com/v1beta/openai", "api_key": "env:GOOGLE_API_KEY", "role": "free_coders/image+reasoning",    "model": "gemma-4-31b-it",                              "fallbacks": ["big-pickle"]},
+  "google/gemma-4-26b-a4b-it":   {"url": "https://generativelanguage.googleapis.com/v1beta/openai", "api_key": "env:GOOGLE_API_KEY", "role": "free_coders/image+reasoning",    "model": "gemma-4-26b-a4b-it",                          "fallbacks": ["google/gemma-4-31b-it"]},
+  "cohere/north-mini-code-free":  {"url": "https://openrouter.ai/api/v1", "api_key": "env:OPENROUTER_API_KEY", "role": "free_coders/code+reasoning",    "model": "cohere/north-mini-code:free",                  "fallbacks": ["big-pickle"]},
   "deepseek-v4-flash-free":{"url": "env:OPENCODE_FREE_URL", "api_key": "env:OPENCODE_API_KEY", "role": "free_coders/fast",                "fallbacks": ["mimo-v2.5-free"]},
   "mimo-v2.5-free":        {"url": "env:OPENCODE_FREE_URL", "api_key": "env:OPENCODE_API_KEY", "role": "free_coders/general",             "fallbacks": ["north-mini-code-free"]},
 
