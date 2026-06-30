@@ -54,14 +54,18 @@ CODER_MAP_FREE: dict[str, str] = {
     "general": "mimo-v2.5-free",         # free general quality option
 }
 
-# Free global tier (free-global/v1) — open-source/global providers
+# Free global tier (free-global/v1) — open-source/global providers only.
+# All entries are genuinely free and verified stable (no intermittent 429s).
+# No OpenCode go-subscription, no direct ZAI, no OpenRouter gpt-oss (rate-limited).
+# For GLM via OpenCode subscription, use the go tier (opencode-go/glm-5.2).
 CODER_MAP_FREE_GLOBAL: dict[str, str] = {
-    "tier1":           "cohere/north-mini-code-free",     # core free global tier
-    "creative":       "openrouter/free",                # creative tasks
-    "image+reasoning": "google/gemma-4-31b-it",         # image understanding + reasoning
-    "general":         "zai/glm-5.2",                   # global reasoning model
-    "long":           "opencode-go/glm-5.2",           # long text tasks
-    "reasoning":      "zai/glm-5.2",                   # reasoning tasks
+    "tier1":           "cohere/north-mini-code-free",     # core free global tier (OpenRouter, 256K)
+    "code":            "cohere/north-mini-code-free",     # code + reasoning
+    "creative":        "google/gemma-4-31b-it",           # creative tasks (gpt-oss dropped: rate-limited)
+    "image+reasoning": "google/gemma-4-31b-it",           # image understanding + reasoning
+    "general":         "cohere/north-mini-code-free",     # general default
+    "long":            "cohere/north-mini-code-free",     # 256K context for long text
+    "reasoning":       "google/gemma-4-31b-it",           # reasoning-capable, free
 }
 
 # Go paid tier (zen/go/v1) — best-in-class per category.
