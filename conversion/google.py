@@ -2,6 +2,8 @@ import json
 import logging
 import uuid
 
+from typing import Any
+
 logger = logging.getLogger("opencode-proxy")
 
 STOP_REASON_MAP = {
@@ -26,32 +28,32 @@ def _find_tool_name_by_id(messages: list, tool_use_id: str) -> str:
     return "unknown_tool"
 
 
-def _anthropic_to_google(payload: dict) -> dict:
+def _anthropic_to_google(payload: dict) -> dict[str, Any]:
     """Convert an Anthropic Messages API payload to Google GenAI REST API format."""
     messages_list = payload.get("messages", [])
     
     # 1. System Instruction
     system = payload.get("system")
-    system_instruction = None
+    system_instruction: dict[str, Any] | None = None
     if system:
         if isinstance(system, str):
             system_instruction = {"parts": [{"text": system}]}
         elif isinstance(system, list):
-            parts = []
+            system_parts: list[dict[str, Any]] = []
             for b in system:
                 if isinstance(b, dict) and b.get("type") == "text":
-                    parts.append({"text": b.get("text", "")})
-            if parts:
-                system_instruction = {"parts": parts}
+                    system_parts.append({"text": b.get("text", "")})
+            if system_parts:
+                system_instruction = {"parts": system_parts}
 
     # 2. Contents (Messages)
-    contents = []
+    contents: list[dict[str, Any]] = []
     for msg in messages_list:
         role = msg.get("role", "user")
         # Google expects "user" or "model"
         google_role = "model" if role == "assistant" else "user"
         content = msg.get("content", "")
-        parts = []
+        parts: list[dict[str, Any]] = []
 
         if isinstance(content, str):
             parts.append({"text": content})
@@ -103,9 +105,9 @@ def _anthropic_to_google(payload: dict) -> dict:
             contents.append({"role": google_role, "parts": parts})
 
     # 3. Tools
-    tools_list = []
+    tools_list: list[dict[str, Any]] = []
     if "tools" in payload:
-        function_declarations = []
+        function_declarations: list[dict[str, Any]] = []
         for t in payload["tools"]:
             function_declarations.append({
                 "name": t.get("name", ""),
@@ -116,7 +118,7 @@ def _anthropic_to_google(payload: dict) -> dict:
             tools_list.append({"functionDeclarations": function_declarations})
 
     # 4. Generation Config
-    generation_config = {}
+    generation_config: dict[str, Any] = {}
     if "max_tokens" in payload:
         generation_config["maxOutputTokens"] = payload["max_tokens"]
     if "temperature" in payload:
@@ -135,7 +137,7 @@ def _anthropic_to_google(payload: dict) -> dict:
         }
 
     # Assemble request payload
-    google_payload = {"contents": contents}
+    google_payload: dict[str, Any] = {"contents": contents}
     if system_instruction:
         google_payload["systemInstruction"] = system_instruction
     if tools_list:
