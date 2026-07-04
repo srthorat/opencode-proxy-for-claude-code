@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from auth import check_auth
 from client import get_client
-from config import _ANTHROPIC_COMPAT_MODELS, UPSTREAM_API_KEY, UPSTREAM_URL
+from config import _ANTHROPIC_COMPAT_MODELS, MODEL_MAP, UPSTREAM_API_KEY, UPSTREAM_URL
 from context import RequestContext
 from conversion.request import _anthropic_to_openai
 from conversion.response import _openai_to_anthropic
@@ -92,6 +92,13 @@ async def _sanitize_and_route(ctx: RequestContext) -> None:
                         messages, forced_tier=_forced_tier, has_tools=_has_tools
                     )
                     payload["model"] = incoming_model
+
+            # Normalize incoming model key to match keys in MODEL_MAP (e.g. gemma-4-31b-it -> google/gemma-4-31b-it)
+            if not _model_lower.startswith("direct:") and incoming_model not in MODEL_MAP:
+                if f"google/{incoming_model}" in MODEL_MAP:
+                    incoming_model = f"google/{incoming_model}"
+                elif f"opencode-go/{incoming_model}" in MODEL_MAP:
+                    incoming_model = f"opencode-go/{incoming_model}"
 
             upstream_model, upstream_url, upstream_api_key, role = resolve_model_config(
                 incoming_model
