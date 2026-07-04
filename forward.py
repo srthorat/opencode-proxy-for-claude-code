@@ -11,10 +11,10 @@ from auth import check_auth
 from client import get_client
 from config import _ANTHROPIC_COMPAT_MODELS, MODEL_MAP, UPSTREAM_API_KEY, UPSTREAM_URL
 from context import RequestContext
+from conversion.google import _anthropic_to_google, _google_stream_to_anthropic, _google_to_anthropic
 from conversion.request import _anthropic_to_openai
 from conversion.response import _openai_to_anthropic
 from conversion.streaming import _openai_stream_to_anthropic
-from conversion.google import _anthropic_to_google, _google_to_anthropic, _google_stream_to_anthropic
 from router import auto_select_model, get_fallbacks, map_claude_model_name, resolve_model_config
 from sanitization import _sanitize_messages, strip_thinking_from_system
 
