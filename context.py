@@ -20,7 +20,9 @@ class RequestContext:
 
     # Set during _sanitize_and_route
     resolved_model: str | None = None
+    config_model_key: str | None = None
     is_direct: bool = False
+    is_google: bool = False
 
     # Set after routing: body that will actually be sent to the upstream
     send_content: bytes | None = None

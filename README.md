@@ -194,9 +194,8 @@ Set `"model"` in `~/.claude/settings.json`:
 **How `go-all` works:** Similar to `go-auto`, but utilizes the full pool of all 14 supported models by classifying the query into a task category and a complexity level (3 for flagship models, 2 for intermediate/alternate models like `glm-5.2` and `kimi-k2.6`, and 1 for simple fallbacks like `glm-5.1` and `minimax-m2.5`).
 
 **How `free-global-auto` works:** Dynamic routing for the free global tier, leveraging global open-source models:
-* Coding/Reasoning tasks route to `cohere/north-mini-code-free` (via OpenRouter)
-* Multimodal/Creative tasks route to `openrouter/free` (`openai/gpt-oss-20b:free`)
-* Image and reasoning tasks route to `google/gemma-4-31b-it` (directly via Google's API to bypass OpenRouter rate limits)
+* Coding/Reasoning tasks route to `cohere/north-mini-code-free` (via OpenRouter, requires `OPENROUTER_API_KEY`)
+* Creative, image, and reasoning tasks route to `google/gemma-4-31b-it` (directly via Google's AI Studio REST API for maximum performance, requires `GOOGLE_API_KEY`)
 
 **Fallback chains:** If a model returns an error (rate limit, timeout, 5xx), the proxy automatically retries with the next model in the chain — no interruption to your session.
 
@@ -209,6 +208,8 @@ Set `"model"` in `~/.claude/settings.json`:
 | `OPENCODE_API_KEY` | ✅ | Your OpenCode API key |
 | `UPSTREAM_URL` | ✅ | Paid endpoint: `https://opencode.ai/zen/go/v1` |
 | `OPENCODE_FREE_URL` | ✅ for free models | Free endpoint: `https://opencode.ai/zen/v1` |
+| `GOOGLE_API_KEY` | ✅ for Gemma models | Google Gemini API key (for direct Gemma 4 routing) |
+| `OPENROUTER_API_KEY` | ✅ for OpenRouter models | OpenRouter API key (for Cohere/other free models) |
 | `PORT` | — | Proxy listen port (default `8080`) |
 | `PROXY_API_KEY` | — | Optional: require a Bearer token on inbound requests |
 | `DIRECT_URL` / `DIRECT_KEY` | — | Optional: bypass OpenCode for `direct:<model>` requests |
