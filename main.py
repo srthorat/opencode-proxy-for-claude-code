@@ -11,6 +11,7 @@ from auth import check_auth
 from client import close_client
 from config import PORT, PROXY_API_KEY, UPSTREAM_URL
 from forward import forward_request
+from key_pool import pool
 from observability.stats import snapshot
 
 logging.basicConfig(level=logging.INFO)
@@ -21,16 +22,22 @@ logger = logging.getLogger("opencode-proxy")
 # P2 #10: Lifespan context manager (replaces deprecated @app.on_event)
 # ---------------------------------------------------------------------------
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """FastAPI lifespan — startup is implicit (nothing to do); shutdown closes the
-    shared httpx client after a brief drain window for in-flight requests."""
+    """FastAPI lifespan — probe all keys at startup, then serve traffic;
+    close the shared httpx client gracefully on shutdown."""
     if not PROXY_API_KEY:
         logger.warning(
             "PROXY_API_KEY is not set — proxy accepts requests from any client. "
             "Set PROXY_API_KEY in .env to require inbound authentication."
         )
-    yield  # startup: nothing needed — client is created lazily on first request
+    # Probe all free-auto keys before accepting traffic
+    await pool.probe_all()
+    # Background task: re-probe demoted keys every 60 s
+    _recheck_task = asyncio.create_task(pool.recheck_loop(interval=60))
+    yield  # server is live
+    _recheck_task.cancel()
     await asyncio.sleep(0.5)
     await close_client()
 
@@ -64,6 +71,7 @@ app.add_middleware(RequestSizeLimitMiddleware)
 # Health / liveness
 # ---------------------------------------------------------------------------
 
+
 @app.get("/healthz")
 async def healthz():
     return {"status": "ok", "upstream": UPSTREAM_URL}
@@ -78,6 +86,18 @@ async def admin_stats(request: Request):
     return snapshot()
 
 
+@app.get("/admin/key-health")
+async def admin_key_health(request: Request):
+    """Free-auto key pool health — shows per-model key status by index.
+    Raw key values are never returned, only their 1-based indices.
+    Gated behind PROXY_API_KEY if set.
+    """
+    auth_err = check_auth(request)
+    if auth_err:
+        return auth_err
+    return pool.health_snapshot()
+
+
 @app.head("/")
 @app.head("/{path:path}")
 async def head_liveness(path: str = ""):
@@ -88,6 +108,7 @@ async def head_liveness(path: str = ""):
 # ---------------------------------------------------------------------------
 # Token count estimation
 # ---------------------------------------------------------------------------
+
 
 @app.post("/v1/messages/count_tokens")
 async def count_tokens_endpoint(request: Request):
@@ -138,6 +159,7 @@ async def count_tokens_endpoint(request: Request):
 # ---------------------------------------------------------------------------
 # Catch-all proxy route
 # ---------------------------------------------------------------------------
+
 
 @app.api_route(
     "/{path:path}",

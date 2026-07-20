@@ -24,12 +24,14 @@ def _openai_to_anthropic(resp: dict, model: str) -> dict:
         except Exception as e:
             logger.warning("Failed to parse tool call arguments as JSON: %s", e)
             input_data = {}
-        content_blocks.append({
-            "type": "tool_use",
-            "id": tc.get("id", ""),
-            "name": fn.get("name", ""),
-            "input": input_data,
-        })
+        content_blocks.append(
+            {
+                "type": "tool_use",
+                "id": tc.get("id", ""),
+                "name": fn.get("name", ""),
+                "input": input_data,
+            }
+        )
 
     finish_reason = choice.get("finish_reason", "stop")
     stop_reason = STOP_REASON_MAP.get(finish_reason, "end_turn")

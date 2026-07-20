@@ -12,10 +12,7 @@ def _anthropic_to_openai(payload: dict) -> dict:
         if isinstance(system, str):
             messages.append({"role": "system", "content": system})
         elif isinstance(system, list):
-            text = "\n".join(
-                b.get("text", "") for b in system
-                if isinstance(b, dict) and b.get("type") == "text"
-            )
+            text = "\n".join(b.get("text", "") for b in system if isinstance(b, dict) and b.get("type") == "text")
             if text:
                 messages.append({"role": "system", "content": text})
 
@@ -32,24 +29,24 @@ def _anthropic_to_openai(payload: dict) -> dict:
             continue
 
         # Separate block types
-        text_blocks        = [b for b in content if b.get("type") == "text"]
-        tool_use_blocks    = [b for b in content if b.get("type") == "tool_use"]
+        text_blocks = [b for b in content if b.get("type") == "text"]
+        tool_use_blocks = [b for b in content if b.get("type") == "tool_use"]
         tool_result_blocks = [b for b in content if b.get("type") == "tool_result"]
-        image_blocks       = [b for b in content if b.get("type") == "image"]
+        image_blocks = [b for b in content if b.get("type") == "image"]
 
         # Tool results → OpenAI tool messages
         if tool_result_blocks:
             for b in tool_result_blocks:
                 rc = b.get("content", "")
                 if isinstance(rc, list):
-                    rc = " ".join(
-                        rb.get("text", "") for rb in rc if rb.get("type") == "text"
-                    )
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": b.get("tool_use_id", ""),
-                    "content": str(rc),
-                })
+                    rc = " ".join(rb.get("text", "") for rb in rc if rb.get("type") == "text")
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": b.get("tool_use_id", ""),
+                        "content": str(rc),
+                    }
+                )
             # Preserve any accompanying text blocks as a separate user message so
             # they are not silently dropped by the continue below.
             if text_blocks:
@@ -83,15 +80,14 @@ def _anthropic_to_openai(payload: dict) -> dict:
         for b in image_blocks:
             src = b.get("source", {})
             if src.get("type") == "base64":
-                oai_parts.append({
-                    "type": "image_url",
-                    "image_url": {
-                        "url": (
-                            f"data:{src.get('media_type', 'image/jpeg')};"
-                            f"base64,{src.get('data', '')}"
-                        )
-                    },
-                })
+                oai_parts.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": (f"data:{src.get('media_type', 'image/jpeg')};base64,{src.get('data', '')}")
+                        },
+                    }
+                )
             elif src.get("type") == "url":
                 oai_parts.append({"type": "image_url", "image_url": {"url": src.get("url", "")}})
 
@@ -105,8 +101,15 @@ def _anthropic_to_openai(payload: dict) -> dict:
     oai["messages"] = messages
 
     for key in (
-        "max_tokens", "temperature", "top_p", "stream", "stop", "n",
-        "presence_penalty", "frequency_penalty", "seed",
+        "max_tokens",
+        "temperature",
+        "top_p",
+        "stream",
+        "stop",
+        "n",
+        "presence_penalty",
+        "frequency_penalty",
+        "seed",
     ):
         if key in payload:
             oai[key] = payload[key]

@@ -27,7 +27,7 @@ async def _openai_stream_to_anthropic(upstream_resp, model: str):
     yield (
         f"event: message_start\ndata: {json.dumps({'type': 'message_start', 'message': {'id': msg_id, 'type': 'message', 'role': 'assistant', 'content': [], 'model': model, 'stop_reason': None, 'stop_sequence': None, 'usage': {'input_tokens': 0, 'output_tokens': 0}}})}\n\n"
     ).encode()
-    yield b"event: ping\ndata: {\"type\":\"ping\"}\n\n"
+    yield b'event: ping\ndata: {"type":"ping"}\n\n'
 
     stop_reason = "end_turn"
     output_tokens = 0  # P0 #2: accumulate from usage chunks
@@ -137,6 +137,4 @@ async def _openai_stream_to_anthropic(upstream_resp, model: str):
     yield (
         f"event: message_delta\ndata: {json.dumps({'type': 'message_delta', 'delta': {'stop_reason': stop_reason, 'stop_sequence': None}, 'usage': {'output_tokens': output_tokens}})}\n\n"
     ).encode()
-    yield (
-        f"event: message_stop\ndata: {json.dumps({'type': 'message_stop'})}\n\n"
-    ).encode()
+    yield (f"event: message_stop\ndata: {json.dumps({'type': 'message_stop'})}\n\n").encode()

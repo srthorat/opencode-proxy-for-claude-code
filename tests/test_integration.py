@@ -22,6 +22,7 @@ from main import app
 # Shared test client helper
 # ---------------------------------------------------------------------------
 
+
 def get_client() -> TestClient:
     return TestClient(app, raise_server_exceptions=False)
 
@@ -29,6 +30,7 @@ def get_client() -> TestClient:
 # ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
+
 
 class TestHealthz:
     def test_returns_200(self):
@@ -47,6 +49,7 @@ class TestHealthz:
 # ---------------------------------------------------------------------------
 # HEAD liveness probe
 # ---------------------------------------------------------------------------
+
 
 class TestHeadLiveness:
     def test_head_root_returns_200(self):
@@ -68,6 +71,7 @@ class TestHeadLiveness:
 # ---------------------------------------------------------------------------
 # count_tokens endpoint
 # ---------------------------------------------------------------------------
+
 
 class TestCountTokens:
     def test_returns_200(self):
@@ -110,9 +114,7 @@ class TestCountTokens:
         )
         long_resp = client.post(
             "/v1/messages/count_tokens",
-            json={"model": "test", "messages": [
-                {"role": "user", "content": "a" * 1000}
-            ]},
+            json={"model": "test", "messages": [{"role": "user", "content": "a" * 1000}]},
         )
         assert long_resp.json()["input_tokens"] > short_resp.json()["input_tokens"]
 
@@ -130,6 +132,7 @@ class TestCountTokens:
 # ---------------------------------------------------------------------------
 # Request size limit (50 MB cap)
 # ---------------------------------------------------------------------------
+
 
 class TestRequestSizeLimit:
     def test_large_content_length_returns_413(self):
@@ -166,6 +169,7 @@ class TestRequestSizeLimit:
 # ---------------------------------------------------------------------------
 # Auth rejection
 # ---------------------------------------------------------------------------
+
 
 class TestAuthRejection:
     def test_rejects_without_bearer_when_proxy_key_set(self):
@@ -204,13 +208,12 @@ class TestAuthRejection:
             mock_resp.status_code = 200
             mock_resp.headers = {"content-type": "application/json"}
             mock_resp.aread = AsyncMock(
-                return_value=json.dumps({
-                    "choices": [
-                        {"message": {"content": "hi", "tool_calls": None},
-                         "finish_reason": "stop"}
-                    ],
-                    "usage": {"prompt_tokens": 5, "completion_tokens": 1},
-                }).encode()
+                return_value=json.dumps(
+                    {
+                        "choices": [{"message": {"content": "hi", "tool_calls": None}, "finish_reason": "stop"}],
+                        "usage": {"prompt_tokens": 5, "completion_tokens": 1},
+                    }
+                ).encode()
             )
             mock_resp.aclose = AsyncMock()
 
@@ -247,6 +250,7 @@ class TestAuthRejection:
 # Proxy route — basic smoke test with mocked upstream
 # ---------------------------------------------------------------------------
 
+
 class TestProxyRoute:
     def _make_mock_client(self, response_body: dict, status_code: int = 200):
         """Return a mock httpx-like client that returns a canned JSON response."""
@@ -263,9 +267,7 @@ class TestProxyRoute:
 
     def test_proxy_returns_200_for_valid_request(self):
         oai_response = {
-            "choices": [
-                {"message": {"content": "Hello!", "tool_calls": None}, "finish_reason": "stop"}
-            ],
+            "choices": [{"message": {"content": "Hello!", "tool_calls": None}, "finish_reason": "stop"}],
             "usage": {"prompt_tokens": 5, "completion_tokens": 3},
         }
         mock_client = self._make_mock_client(oai_response)
@@ -285,9 +287,7 @@ class TestProxyRoute:
         """Response from an OpenAI-compat model must be returned in Anthropic format."""
         oai_response = {
             "id": "chatcmpl-test",
-            "choices": [
-                {"message": {"content": "Hi there", "tool_calls": None}, "finish_reason": "stop"}
-            ],
+            "choices": [{"message": {"content": "Hi there", "tool_calls": None}, "finish_reason": "stop"}],
             "usage": {"prompt_tokens": 5, "completion_tokens": 2},
         }
         mock_client = self._make_mock_client(oai_response)

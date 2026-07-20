@@ -6,6 +6,7 @@ from sanitization import _sanitize_messages, _strip_thinking
 # _strip_thinking
 # ---------------------------------------------------------------------------
 
+
 class TestStripThinking:
     def test_removes_thinking_block(self):
         blocks = [
@@ -56,6 +57,7 @@ class TestStripThinking:
 # ---------------------------------------------------------------------------
 # _sanitize_messages — Pass 1: system message hoisting
 # ---------------------------------------------------------------------------
+
 
 class TestSystemMessageHoisting:
     def test_hoists_system_role_to_payload(self):
@@ -113,6 +115,7 @@ class TestSystemMessageHoisting:
 # _sanitize_messages — Pass 2: thinking block stripping
 # ---------------------------------------------------------------------------
 
+
 class TestThinkingBlockStripping:
     def test_thinking_only_turn_gets_placeholder(self):
         messages = [
@@ -150,14 +153,13 @@ class TestThinkingBlockStripping:
 # _sanitize_messages — Pass 3: orphaned tool_result conversion
 # ---------------------------------------------------------------------------
 
+
 class TestOrphanedToolResults:
     def test_orphaned_tool_result_becomes_text(self):
         messages = [
             {
                 "role": "user",
-                "content": [
-                    {"type": "tool_result", "tool_use_id": "ghost_id", "content": "result text"}
-                ],
+                "content": [{"type": "tool_result", "tool_use_id": "ghost_id", "content": "result text"}],
             }
         ]
         result = _sanitize_messages(messages, {})
@@ -169,15 +171,11 @@ class TestOrphanedToolResults:
         messages = [
             {
                 "role": "assistant",
-                "content": [
-                    {"type": "tool_use", "id": "toolu_abc", "name": "my_tool", "input": {}}
-                ],
+                "content": [{"type": "tool_use", "id": "toolu_abc", "name": "my_tool", "input": {}}],
             },
             {
                 "role": "user",
-                "content": [
-                    {"type": "tool_result", "tool_use_id": "toolu_abc", "content": "tool output"}
-                ],
+                "content": [{"type": "tool_result", "tool_use_id": "toolu_abc", "content": "tool output"}],
             },
         ]
         result = _sanitize_messages(messages, {})
@@ -204,9 +202,7 @@ class TestOrphanedToolResults:
         messages = [
             {
                 "role": "user",
-                "content": [
-                    {"type": "tool_result", "tool_use_id": "no_match", "content": ""}
-                ],
+                "content": [{"type": "tool_result", "tool_use_id": "no_match", "content": ""}],
             }
         ]
         result = _sanitize_messages(messages, {})
@@ -217,14 +213,13 @@ class TestOrphanedToolResults:
 # _sanitize_messages — Pass 3: mixed user message splitting
 # ---------------------------------------------------------------------------
 
+
 class TestMixedUserMessageSplitting:
     def test_splits_mixed_user_message(self):
         messages = [
             {
                 "role": "assistant",
-                "content": [
-                    {"type": "tool_use", "id": "toolu_xyz", "name": "search", "input": {}}
-                ],
+                "content": [{"type": "tool_use", "id": "toolu_xyz", "name": "search", "input": {}}],
             },
             {
                 "role": "user",
@@ -247,15 +242,11 @@ class TestMixedUserMessageSplitting:
         messages = [
             {
                 "role": "assistant",
-                "content": [
-                    {"type": "tool_use", "id": "toolu_a", "name": "fn", "input": {}}
-                ],
+                "content": [{"type": "tool_use", "id": "toolu_a", "name": "fn", "input": {}}],
             },
             {
                 "role": "user",
-                "content": [
-                    {"type": "tool_result", "tool_use_id": "toolu_a", "content": "res"}
-                ],
+                "content": [{"type": "tool_result", "tool_use_id": "toolu_a", "content": "res"}],
             },
         ]
         result = _sanitize_messages(messages, {})
@@ -263,8 +254,6 @@ class TestMixedUserMessageSplitting:
         assert len(result) == 2
 
     def test_pure_text_user_message_not_split(self):
-        messages = [
-            {"role": "user", "content": [{"type": "text", "text": "hello"}]}
-        ]
+        messages = [{"role": "user", "content": [{"type": "text", "text": "hello"}]}]
         result = _sanitize_messages(messages, {})
         assert len(result) == 1

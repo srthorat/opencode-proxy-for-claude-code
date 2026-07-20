@@ -39,9 +39,7 @@ def strip_thinking_from_system(system) -> "str | list":
         return system
     cleaned = [b for b in system if not (isinstance(b, dict) and b.get("type") in _UNSUPPORTED)]
     if len(cleaned) != len(system):
-        logger.warning(
-            "Stripped %d thinking block(s) from system field", len(system) - len(cleaned)
-        )
+        logger.warning("Stripped %d thinking block(s) from system field", len(system) - len(cleaned))
     return cleaned
 
 
@@ -68,8 +66,7 @@ def _sanitize_messages(messages: list, payload: dict) -> list:
                 extra_system_parts.append(c)
             elif isinstance(c, list):
                 extra_system_parts.extend(
-                    b.get("text", "") for b in c
-                    if isinstance(b, dict) and b.get("type") == "text"
+                    b.get("text", "") for b in c if isinstance(b, dict) and b.get("type") == "text"
                 )
             logger.debug("Hoisting inline system message to top-level system field")
         else:
@@ -81,8 +78,7 @@ def _sanitize_messages(messages: list, payload: dict) -> list:
             combined = "\n\n".join(filter(None, [existing] + extra_system_parts))
         elif isinstance(existing, list):
             existing_text = "\n\n".join(
-                b.get("text", "") for b in existing
-                if isinstance(b, dict) and b.get("type") == "text"
+                b.get("text", "") for b in existing if isinstance(b, dict) and b.get("type") == "text"
             )
             combined = "\n\n".join(filter(None, [existing_text] + extra_system_parts))
         else:
@@ -131,12 +127,9 @@ def _sanitize_messages(messages: list, payload: dict) -> list:
                         rc = block.get("content", "")
                         if isinstance(rc, list):
                             rc = " ".join(
-                                b.get("text", "") for b in rc
-                                if isinstance(b, dict) and b.get("type") == "text"
+                                b.get("text", "") for b in rc if isinstance(b, dict) and b.get("type") == "text"
                             )
-                        logger.debug(
-                            "Converting orphaned tool_result to text (tool_use_id=%s)", tid
-                        )
+                        logger.debug("Converting orphaned tool_result to text (tool_use_id=%s)", tid)
                         new_content.append({"type": "text", "text": str(rc) or "[tool result]"})
                 else:
                     new_content.append(block)
@@ -144,14 +137,8 @@ def _sanitize_messages(messages: list, payload: dict) -> list:
             # Split user messages that mix tool_result and non-tool_result blocks.
             # Strict providers (e.g. MiniMax) reject mixed messages.
             # Emit: first a tool_result-only message, then a text-only message.
-            tool_result_blocks = [
-                b for b in new_content
-                if isinstance(b, dict) and b.get("type") == "tool_result"
-            ]
-            other_blocks = [
-                b for b in new_content
-                if not (isinstance(b, dict) and b.get("type") == "tool_result")
-            ]
+            tool_result_blocks = [b for b in new_content if isinstance(b, dict) and b.get("type") == "tool_result"]
+            other_blocks = [b for b in new_content if not (isinstance(b, dict) and b.get("type") == "tool_result")]
             if tool_result_blocks and other_blocks:
                 logger.debug("Splitting mixed user message into tool_results + text parts")
                 result.append({**msg, "content": tool_result_blocks})

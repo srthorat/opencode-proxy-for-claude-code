@@ -5,6 +5,73 @@ from typing import Any
 
 logger = logging.getLogger("opencode-proxy")
 
+# JSON Schema keywords unsupported by the Gemini function-declaration schema.
+# These are stripped recursively from every tool's input_schema before forwarding.
+_GEMINI_UNSUPPORTED_SCHEMA_KEYS = frozenset(
+    {
+        "$schema",
+        "additionalProperties",
+        "propertyNames",
+        "unevaluatedProperties",
+        "patternProperties",
+        "if",
+        "then",
+        "else",
+        "allOf",
+        "anyOf",
+        "oneOf",
+        "not",  # Gemini only supports a subset; strip to be safe
+        "$ref",
+        "$defs",
+        "definitions",
+        "$id",
+        "$anchor",
+        "$comment",
+        "contentEncoding",
+        "contentMediaType",
+        "deprecated",
+        "readOnly",
+        "writeOnly",
+        "examples",
+        "default",
+    }
+)
+
+
+def _sanitize_schema_for_gemini(schema: Any) -> Any:
+    """Recursively remove JSON Schema keywords unsupported by the Gemini API.
+
+    Handles the draft-7 numeric form of ``exclusiveMinimum``/``exclusiveMaximum``
+    by promoting them to ``minimum``/``maximum`` so numeric constraints are
+    preserved without causing a 400 error.
+    """
+    if not isinstance(schema, dict):
+        return schema
+
+    cleaned: dict[str, Any] = {}
+    for key, value in schema.items():
+        if key in _GEMINI_UNSUPPORTED_SCHEMA_KEYS:
+            continue
+
+        # draft-7: exclusiveMinimum/Maximum can be a number (not boolean)
+        if key == "exclusiveMinimum" and isinstance(value, (int, float)):
+            # Promote to plain minimum; may merge with existing minimum
+            cleaned["minimum"] = max(cleaned.get("minimum", value), value)
+            continue
+        if key == "exclusiveMaximum" and isinstance(value, (int, float)):
+            cleaned["maximum"] = min(cleaned.get("maximum", value), value)
+            continue
+
+        if isinstance(value, dict):
+            cleaned[key] = _sanitize_schema_for_gemini(value)
+        elif isinstance(value, list):
+            cleaned[key] = [_sanitize_schema_for_gemini(item) for item in value]
+        else:
+            cleaned[key] = value
+
+    return cleaned
+
+
 STOP_REASON_MAP = {
     "STOP": "end_turn",
     "MAX_TOKENS": "max_tokens",
@@ -18,11 +85,7 @@ def _find_tool_name_by_id(messages: list, tool_use_id: str) -> str:
         content = m.get("content")
         if isinstance(content, list):
             for b in content:
-                if (
-                    isinstance(b, dict)
-                    and b.get("type") == "tool_use"
-                    and b.get("id") == tool_use_id
-                ):
+                if isinstance(b, dict) and b.get("type") == "tool_use" and b.get("id") == tool_use_id:
                     return b.get("name", "")
     return "unknown_tool"
 
@@ -30,7 +93,7 @@ def _find_tool_name_by_id(messages: list, tool_use_id: str) -> str:
 def _anthropic_to_google(payload: dict) -> dict[str, Any]:
     """Convert an Anthropic Messages API payload to Google GenAI REST API format."""
     messages_list = payload.get("messages", [])
-    
+
     # 1. System Instruction
     system = payload.get("system")
     system_instruction: dict[str, Any] | None = None
@@ -66,40 +129,31 @@ def _anthropic_to_google(payload: dict) -> dict[str, Any]:
                 elif btype == "image":
                     src = block.get("source", {})
                     if src.get("type") == "base64":
-                        parts.append({
-                            "inlineData": {
-                                "mimeType": src.get("media_type", "image/jpeg"),
-                                "data": src.get("data", "")
+                        parts.append(
+                            {
+                                "inlineData": {
+                                    "mimeType": src.get("media_type", "image/jpeg"),
+                                    "data": src.get("data", ""),
+                                }
                             }
-                        })
+                        )
                 elif btype == "tool_use":
-                    parts.append({
-                        "functionCall": {
-                            "name": block.get("name", ""),
-                            "args": block.get("input", {})
-                        }
-                    })
+                    parts.append({"functionCall": {"name": block.get("name", ""), "args": block.get("input", {})}})
                 elif btype == "tool_result":
                     tool_use_id = block.get("tool_use_id", "")
                     tool_name = _find_tool_name_by_id(messages_list, tool_use_id)
                     content_val = block.get("content")
-                    
+
                     if isinstance(content_val, list):
                         text_str = "\n".join(
-                            b.get("text", "") for b in content_val
-                            if isinstance(b, dict) and b.get("type") == "text"
+                            b.get("text", "") for b in content_val if isinstance(b, dict) and b.get("type") == "text"
                         )
                     else:
                         text_str = str(content_val)
-                    
+
                     # Wrap output in a JSON object since Gemini expects a structured response
-                    parts.append({
-                        "functionResponse": {
-                            "name": tool_name,
-                            "response": {"result": text_str}
-                        }
-                    })
-        
+                    parts.append({"functionResponse": {"name": tool_name, "response": {"result": text_str}}})
+
         if parts:
             contents.append({"role": google_role, "parts": parts})
 
@@ -108,11 +162,15 @@ def _anthropic_to_google(payload: dict) -> dict[str, Any]:
     if "tools" in payload:
         function_declarations: list[dict[str, Any]] = []
         for t in payload["tools"]:
-            function_declarations.append({
+            raw_schema = t.get("input_schema", {})
+            gemini_params = _sanitize_schema_for_gemini(raw_schema)
+            decl: dict[str, Any] = {
                 "name": t.get("name", ""),
                 "description": t.get("description", ""),
-                "parameters": t.get("input_schema", {})
-            })
+            }
+            if gemini_params:
+                decl["parameters"] = gemini_params
+            function_declarations.append(decl)
         if function_declarations:
             tools_list.append({"functionDeclarations": function_declarations})
 
@@ -131,9 +189,7 @@ def _anthropic_to_google(payload: dict) -> dict[str, Any]:
     thinking = payload.get("thinking")
     if thinking and isinstance(thinking, dict) and thinking.get("type") == "enabled":
         budget = thinking.get("budget_tokens", 1024)
-        generation_config["thinkingConfig"] = {
-            "thinkingBudget": budget
-        }
+        generation_config["thinkingConfig"] = {"thinkingBudget": budget}
 
     # Assemble request payload
     google_payload: dict[str, Any] = {"contents": contents}
@@ -157,10 +213,7 @@ def _anthropic_to_google(payload: dict) -> dict[str, Any]:
                 google_payload["toolConfig"] = {"functionCallingConfig": {"mode": "NONE"}}
             elif ttype == "tool" and "name" in tc:
                 google_payload["toolConfig"] = {
-                    "functionCallingConfig": {
-                        "mode": "ANY",
-                        "allowedFunctionNames": [tc["name"]]
-                    }
+                    "functionCallingConfig": {"mode": "ANY", "allowedFunctionNames": [tc["name"]]}
                 }
 
     return google_payload
@@ -179,12 +232,14 @@ def _google_to_anthropic(resp: dict, model: str) -> dict:
             content_blocks.append({"type": "text", "text": part["text"]})
         elif "functionCall" in part:
             fc = part["functionCall"]
-            content_blocks.append({
-                "type": "tool_use",
-                "id": f"toolu_{uuid.uuid4().hex[:24]}",
-                "name": fc.get("name", ""),
-                "input": fc.get("args", {})
-            })
+            content_blocks.append(
+                {
+                    "type": "tool_use",
+                    "id": f"toolu_{uuid.uuid4().hex[:24]}",
+                    "name": fc.get("name", ""),
+                    "input": fc.get("args", {}),
+                }
+            )
 
     finish_reason = choice.get("finishReason", "STOP")
     stop_reason = STOP_REASON_MAP.get(finish_reason, "end_turn")
@@ -212,7 +267,7 @@ async def _google_stream_to_anthropic(upstream_resp, model: str):
     yield (
         f"event: message_start\ndata: {json.dumps({'type': 'message_start', 'message': {'id': msg_id, 'type': 'message', 'role': 'assistant', 'content': [], 'model': model, 'stop_reason': None, 'stop_sequence': None, 'usage': {'input_tokens': 0, 'output_tokens': 0}}})}\n\n"
     ).encode()
-    yield b"event: ping\ndata: {\"type\":\"ping\"}\n\n"
+    yield b'event: ping\ndata: {"type":"ping"}\n\n'
 
     stop_reason = "end_turn"
     output_tokens = 0
@@ -302,6 +357,4 @@ async def _google_stream_to_anthropic(upstream_resp, model: str):
     yield (
         f"event: message_delta\ndata: {json.dumps({'type': 'message_delta', 'delta': {'stop_reason': stop_reason, 'stop_sequence': None}, 'usage': {'output_tokens': output_tokens}})}\n\n"
     ).encode()
-    yield (
-        f"event: message_stop\ndata: {json.dumps({'type': 'message_stop'})}\n\n"
-    ).encode()
+    yield (f"event: message_stop\ndata: {json.dumps({'type': 'message_stop'})}\n\n").encode()

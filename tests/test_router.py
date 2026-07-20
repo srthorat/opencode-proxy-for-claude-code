@@ -1,4 +1,5 @@
 """Tests for router.py — _keyword_fallback, map_claude_model_name, auto_select_model."""
+
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -11,6 +12,7 @@ from router import _keyword_fallback, auto_select_model, map_claude_model_name, 
 # _keyword_fallback
 # ---------------------------------------------------------------------------
 
+
 class TestKeywordFallback:
     def test_code_with_backtick_block(self):
         tier, category = _keyword_fallback("```python\ndef hello():\n    pass\n```", 1)
@@ -19,9 +21,7 @@ class TestKeywordFallback:
 
     def test_code_with_multiple_keywords(self):
         # "implement" + "debug" → code_hits >= 2
-        tier, category = _keyword_fallback(
-            "Can you implement a function to debug this error?", 1
-        )
+        tier, category = _keyword_fallback("Can you implement a function to debug this error?", 1)
         assert tier == "go"
         assert category == "code"
 
@@ -32,9 +32,7 @@ class TestKeywordFallback:
         assert category != "code"
 
     def test_reasoning_keywords(self):
-        tier, category = _keyword_fallback(
-            "Can you explain the architecture and analyze the tradeoffs?", 1
-        )
+        tier, category = _keyword_fallback("Can you explain the architecture and analyze the tradeoffs?", 1)
         assert tier == "go"
         assert category == "reasoning"
 
@@ -64,9 +62,7 @@ class TestKeywordFallback:
         assert category == "creative"
 
     def test_agent_keywords(self):
-        tier, category = _keyword_fallback(
-            "Create a workflow to automate deployments", 1
-        )
+        tier, category = _keyword_fallback("Create a workflow to automate deployments", 1)
         assert tier == "go"
         assert category == "agent"
 
@@ -124,6 +120,7 @@ class TestKeywordFallback:
 # map_claude_model_name
 # ---------------------------------------------------------------------------
 
+
 class TestMapClaudeModelName:
     def test_haiku_maps_to_free_auto(self):
         assert map_claude_model_name("claude-haiku-3-5-20241022") == "free-auto"
@@ -154,6 +151,7 @@ class TestMapClaudeModelName:
     def test_model_in_model_map_not_remapped(self, monkeypatch):
         """A claude-* model that IS in MODEL_MAP must not be redirected."""
         import router as router_module
+
         monkeypatch.setattr(
             router_module,
             "MODEL_MAP",
@@ -171,10 +169,12 @@ class TestMapClaudeModelName:
 # auto_select_model — LLM path (P3 #19)
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(autouse=True)
 def clear_clf_cache():
     """Clear classifier caches before and after each test to avoid cross-test pollution."""
     import router
+
     router._clf_cache.clear()
     _keyword_fallback.cache_clear()
     yield
@@ -187,9 +187,7 @@ def _make_llm_mock(tier: str, category: str, status_code: int = 200) -> MagicMoc
     body = json.dumps({"tier": tier, "category": category})
     mock_resp = MagicMock()
     mock_resp.status_code = status_code
-    mock_resp.json.return_value = {
-        "choices": [{"message": {"content": body}}]
-    }
+    mock_resp.json.return_value = {"choices": [{"message": {"content": body}}]}
     return mock_resp
 
 
@@ -205,10 +203,8 @@ class TestAutoSelectModel:
 
         with patch("router.get_client", AsyncMock(return_value=mock_client)):
             # Use a short generic query so the code fast-precheck doesn't fire
-            result = await auto_select_model(
-                [{"role": "user", "content": "what is a sorting algorithm"}]
-            )
-        assert result == CODER_MAP_GO["code"]
+            result = await auto_select_model([{"role": "user", "content": "what is a sorting algorithm"}])
+        assert result == CODER_MAP_GO_ALL.get("code:3", CODER_MAP_GO_ALL["code"])
 
     @pytest.mark.asyncio
     async def test_llm_success_picks_go_reasoning_model(self):
@@ -217,10 +213,8 @@ class TestAutoSelectModel:
         mock_client.post = AsyncMock(return_value=mock_resp)
 
         with patch("router.get_client", AsyncMock(return_value=mock_client)):
-            result = await auto_select_model(
-                [{"role": "user", "content": "what is one plus one"}]
-            )
-        assert result == CODER_MAP_GO["reasoning"]
+            result = await auto_select_model([{"role": "user", "content": "what is one plus one"}])
+        assert result == CODER_MAP_GO_ALL.get("reasoning:3", CODER_MAP_GO_ALL["reasoning"])
 
     @pytest.mark.asyncio
     async def test_llm_success_picks_free_trivial_model(self):
@@ -229,9 +223,7 @@ class TestAutoSelectModel:
         mock_client.post = AsyncMock(return_value=mock_resp)
 
         with patch("router.get_client", AsyncMock(return_value=mock_client)):
-            result = await auto_select_model(
-                [{"role": "user", "content": "hi"}]
-            )
+            result = await auto_select_model([{"role": "user", "content": "hi"}])
         assert result == CODER_MAP_FREE["trivial"]
 
     # ── LLM failure → keyword fallback ──────────────────────────────────────
@@ -243,9 +235,7 @@ class TestAutoSelectModel:
         mock_client.post = AsyncMock(side_effect=Exception("connection refused"))
 
         with patch("router.get_client", AsyncMock(return_value=mock_client)):
-            result = await auto_select_model(
-                [{"role": "user", "content": "x" * 4001}]
-            )
+            result = await auto_select_model([{"role": "user", "content": "x" * 4001}])
         assert result == CODER_MAP_GO["long"]
 
     @pytest.mark.asyncio
@@ -255,9 +245,7 @@ class TestAutoSelectModel:
         mock_client.post = AsyncMock(side_effect=Exception("timeout"))
 
         with patch("router.get_client", AsyncMock(return_value=mock_client)):
-            result = await auto_select_model(
-                [{"role": "user", "content": "Hello!"}]
-            )
+            result = await auto_select_model([{"role": "user", "content": "Hello!"}])
         assert result == CODER_MAP_FREE["trivial"]
 
     @pytest.mark.asyncio
@@ -268,9 +256,7 @@ class TestAutoSelectModel:
         mock_client.post = AsyncMock(return_value=mock_resp)
 
         with patch("router.get_client", AsyncMock(return_value=mock_client)):
-            result = await auto_select_model(
-                [{"role": "user", "content": "Hello!"}]
-            )
+            result = await auto_select_model([{"role": "user", "content": "Hello!"}])
         # Keyword fallback: "Hello!" (6 chars, 1 turn) → free/trivial
         assert result == CODER_MAP_FREE["trivial"]
 
@@ -288,6 +274,7 @@ class TestAutoSelectModel:
                 forced_tier="free",
             )
         assert result in CODER_MAP_FREE.values()
+
     @pytest.mark.asyncio
     async def test_forced_tier_go_always_picks_go_model(self):
         """forced_tier='go' must pick from CODER_MAP_GO."""
@@ -300,6 +287,7 @@ class TestAutoSelectModel:
                 forced_tier="go",
             )
         assert result in CODER_MAP_GO.values()
+
     @pytest.mark.asyncio
     async def test_forced_tier_go_all_always_picks_go_all_model(self):
         """forced_tier='go-all' must pick from CODER_MAP_GO_ALL."""
@@ -438,6 +426,7 @@ class TestAutoSelectModel:
 # ---------------------------------------------------------------------------
 # TestResolveModelConfig
 # ---------------------------------------------------------------------------
+
 
 class TestResolveModelConfig:
     def test_resolve_with_opencode_go_prefix_directly(self):

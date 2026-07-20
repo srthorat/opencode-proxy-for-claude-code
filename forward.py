@@ -9,12 +9,13 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from auth import check_auth
 from client import get_client
-from config import _ANTHROPIC_COMPAT_MODELS, MODEL_MAP, UPSTREAM_API_KEY, UPSTREAM_URL
+from config import _ANTHROPIC_COMPAT_MODELS, FREE_AUTO_MODELS, MODEL_MAP, UPSTREAM_API_KEY, UPSTREAM_URL
 from context import RequestContext
 from conversion.google import _anthropic_to_google, _google_stream_to_anthropic, _google_to_anthropic
 from conversion.request import _anthropic_to_openai
 from conversion.response import _openai_to_anthropic
 from conversion.streaming import _openai_stream_to_anthropic
+from key_pool import pool
 from router import auto_select_model, get_fallbacks, map_claude_model_name, resolve_model_config
 from sanitization import _sanitize_messages, strip_thinking_from_system
 
@@ -36,6 +37,7 @@ def _is_openai_compat(model_name: str) -> bool:
 # ---------------------------------------------------------------------------
 # Pipeline stage 1: parse body, sanitize messages, resolve model
 # ---------------------------------------------------------------------------
+
 
 async def _sanitize_and_route(ctx: RequestContext) -> None:
     """Parse the JSON body, sanitize messages, resolve the upstream model and URL.
@@ -76,21 +78,33 @@ async def _sanitize_and_route(ctx: RequestContext) -> None:
                         incoming_model = mapped
                         _model_lower = mapped
 
-                # Dynamic routing: auto / free-auto / free-global / free-global-auto / go-auto / go-all / go-all-auto
-                if _model_lower in ("auto", "free-auto", "free-global", "free-global-auto", "go-auto", "go-all", "go-all-auto"):
+                # Dynamic routing: 3 simplified tiers — free / free-global / go (all paid)
+                if _model_lower in (
+                    "auto",
+                    "free",
+                    "free-auto",
+                    "free-all",
+                    "free-global",
+                    "free-global-auto",
+                    "go",
+                    "go-auto",
+                    "go-all",
+                    "go-all-auto",
+                ):
                     messages = payload.get("messages", [])
                     _forced_tier = {
+                        "free": "free",
                         "free-auto": "free",
+                        "free-all": "free",
                         "free-global": "free-global",
                         "free-global-auto": "free-global",
+                        "go": "go",
                         "go-auto": "go",
-                        "go-all": "go-all",
-                        "go-all-auto": "go-all",
+                        "go-all": "go",
+                        "go-all-auto": "go",
                     }.get(_model_lower)
                     _has_tools = bool(payload.get("tools"))  # agent mode signal
-                    incoming_model = await auto_select_model(
-                        messages, forced_tier=_forced_tier, has_tools=_has_tools
-                    )
+                    incoming_model = await auto_select_model(messages, forced_tier=_forced_tier, has_tools=_has_tools)
                     payload["model"] = incoming_model
 
             # Normalize incoming model key to match keys in MODEL_MAP (e.g. gemma-4-31b-it -> google/gemma-4-31b-it)
@@ -100,9 +114,7 @@ async def _sanitize_and_route(ctx: RequestContext) -> None:
                 elif f"opencode-go/{incoming_model}" in MODEL_MAP:
                     incoming_model = f"opencode-go/{incoming_model}"
 
-            upstream_model, upstream_url, upstream_api_key, role = resolve_model_config(
-                incoming_model
-            )
+            upstream_model, upstream_url, upstream_api_key, role = resolve_model_config(incoming_model)
             ctx.is_direct = role == "direct"
             payload["model"] = upstream_model
             ctx.resolved_model = upstream_model
@@ -125,6 +137,7 @@ async def _sanitize_and_route(ctx: RequestContext) -> None:
 # ---------------------------------------------------------------------------
 # Pipeline stage 2: Anthropic → OpenAI protocol conversion (if needed)
 # ---------------------------------------------------------------------------
+
 
 async def _maybe_convert_protocol(ctx: RequestContext) -> None:
     """Convert the Anthropic /v1/messages payload to OpenAI /chat/completions or Google GenAI format.
@@ -168,6 +181,7 @@ async def _maybe_convert_protocol(ctx: RequestContext) -> None:
 # Pipeline stage 3: build the target URL
 # ---------------------------------------------------------------------------
 
+
 def _build_target_url(ctx: RequestContext) -> None:
     """Compute ctx.target_url and potentially rewrite ctx.send_content for legacy paths."""
     base = ctx.per_request_upstream_url.rstrip("/")
@@ -176,7 +190,7 @@ def _build_target_url(ctx: RequestContext) -> None:
     if ctx.is_google:
         if "v1beta" not in base:
             base = f"{base}/v1beta"
-        
+
         is_stream = False
         if ctx.send_content:
             try:
@@ -184,12 +198,12 @@ def _build_target_url(ctx: RequestContext) -> None:
                 is_stream = p.get("stream", False)
             except Exception:
                 pass
-        
+
         action = "streamGenerateContent" if is_stream else "generateContent"
         model_name = ctx.resolved_model or ""
         if model_name.startswith("google/"):
-            model_name = model_name[len("google/"):]
-        
+            model_name = model_name[len("google/") :]
+
         ctx.target_url = f"{base}/models/{model_name}:{action}"
         return
 
@@ -213,17 +227,14 @@ def _build_target_url(ctx: RequestContext) -> None:
 
     # If base already includes /v1 and path also starts with /v1, avoid duplication
     if base.endswith("/v1") and path.startswith("/v1"):
-        path = path[len("/v1"):]
+        path = path[len("/v1") :]
 
     target_url = base + path
     # Collapse accidental duplicate version segments like /v1/v1/ → /v1/
     target_url = target_url.replace("/v1/v1/", "/v1/")
 
     if ctx.query:
-        qs_parts = [
-            p for p in ctx.query.split("&")
-            if p.split("=")[0].lower() not in _STRIP_QS
-        ]
+        qs_parts = [p for p in ctx.query.split("&") if p.split("=")[0].lower() not in _STRIP_QS]
         if qs_parts:
             target_url += "?" + "&".join(qs_parts)
 
@@ -234,24 +245,26 @@ def _build_target_url(ctx: RequestContext) -> None:
 # Pipeline stage 4: forward to upstream, handle response
 # ---------------------------------------------------------------------------
 
+
 async def _forward_to_upstream(ctx: RequestContext) -> Response:
     """Send the request upstream, retrying configured fallback models on retryable errors."""
     req_id = ctx.headers.get("x-request-id")
 
     # Build ordered candidate list: [primary, fallback1, fallback2, ...]
     candidates: list[tuple[str, str, str | None, bool, str | None]] = [
-        (ctx.resolved_model or "", ctx.per_request_upstream_url,
-         ctx.per_request_upstream_api_key, ctx.need_protocol_conv, ctx.config_model_key)
+        (
+            ctx.resolved_model or "",
+            ctx.per_request_upstream_url,
+            ctx.per_request_upstream_api_key,
+            ctx.need_protocol_conv,
+            ctx.config_model_key,
+        )
     ]
     lookup_key = ctx.config_model_key or ctx.resolved_model
     if lookup_key:
         for fb in get_fallbacks(lookup_key):
             fb_model, fb_url, fb_key, _ = resolve_model_config(fb)
-            fb_need_conv = (
-                ctx.path == "/v1/messages"
-                and _is_openai_compat(fb_model)
-                and not ctx.is_direct
-            )
+            fb_need_conv = ctx.path == "/v1/messages" and _is_openai_compat(fb_model) and not ctx.is_direct
             candidates.append((fb_model, fb_url or UPSTREAM_URL, fb_key, fb_need_conv, fb))
 
     client = await get_client()
@@ -265,10 +278,7 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
             ctx.config_model_key = config_key
             ctx.per_request_upstream_url = url
             ctx.per_request_upstream_api_key = key
-            ctx.is_google = (
-                isinstance(url, str)
-                and "generativelanguage.googleapis.com" in url
-            )
+            ctx.is_google = isinstance(url, str) and "generativelanguage.googleapis.com" in url
 
             # Re-run protocol conversion when fallback uses a different protocol
             ctx.send_content = ctx.pre_conv_content or ctx.body
@@ -296,55 +306,97 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
 
             _build_target_url(ctx)
 
-        # ── Per-attempt: refresh content-length and auth ──────────────────────
-        if ctx.send_content is not None:
-            ctx.headers["content-length"] = str(len(ctx.send_content))
-        ctx.headers.pop("authorization", None)
-        ctx.headers.pop("x-goog-api-key", None)
-        if ctx.per_request_upstream_api_key:
-            if ctx.is_google:
-                ctx.headers["x-goog-api-key"] = ctx.per_request_upstream_api_key
+        # ── Key selection: use pool for free-auto models ───────────────────────
+        # For all other models the key from resolve_model_config is used as-is.
+        _active_key = key
+        if model in FREE_AUTO_MODELS and pool.has_keys():
+            _pooled = pool.get_key(model)
+            if _pooled:
+                _active_key = _pooled
             else:
-                ctx.headers["authorization"] = f"Bearer {ctx.per_request_upstream_api_key}"
+                logger.warning("key-pool: all keys demoted for %s — using config key", model)
 
-        auth_present = "yes" if (ctx.headers.get("authorization") or ctx.headers.get("x-goog-api-key")) else "no"
-        model_label = f" model={ctx.resolved_model}" if ctx.resolved_model else ""
-        logger.info(
-            "Forwarding %s %s -> %s (auth=%s%s%s)",
-            ctx.method, ctx.path, ctx.target_url, auth_present, model_label,
-            f" attempt={attempt}" if attempt > 0 else "",
-        )
+        # ── Inner key-rotation loop ────────────────────────────────────────────
+        # Retries the same model with the next healthy key on 401/429.
+        # Breaks out normally on success or non-key error; sets
+        # _req_failed=True on network errors so the outer loop can continue.
+        _req_failed = False
+        upstream_resp = None
+        while True:
+            # Per-attempt: refresh content-length and auth
+            if ctx.send_content is not None:
+                ctx.headers["content-length"] = str(len(ctx.send_content))
+            ctx.headers.pop("authorization", None)
+            ctx.headers.pop("x-goog-api-key", None)
+            if _active_key:
+                if ctx.is_google:
+                    ctx.headers["x-goog-api-key"] = _active_key
+                else:
+                    ctx.headers["authorization"] = f"Bearer {_active_key}"
 
-        if ctx.send_content and ctx.content_type.startswith("application/json"):
-            if logger.isEnabledFor(logging.DEBUG):
-                try:
-                    _dbg = json.loads(ctx.send_content)
-                    if isinstance(_dbg, dict) and "messages" in _dbg:
-                        struct = []
-                        for m in _dbg["messages"]:
-                            c = m.get("content")
-                            if isinstance(c, list):
-                                struct.append(
-                                    f"{m.get('role')}:[{','.join(b.get('type', '?') for b in c if isinstance(b, dict))}]"
-                                )
-                            else:
-                                struct.append(f"{m.get('role')}:str")
-                        logger.debug("Msg structure: %s", " | ".join(struct))
-                except Exception:
-                    logger.exception("Debug message structure logging failed")
-
-        try:
-            assert ctx.target_url is not None
-            upstream_resp = await client.send(
-                client.build_request(
-                    ctx.method, ctx.target_url, headers=ctx.headers, content=ctx.send_content
-                ),
-                stream=True,
+            auth_present = "yes" if (ctx.headers.get("authorization") or ctx.headers.get("x-goog-api-key")) else "no"
+            model_label = f" model={ctx.resolved_model}" if ctx.resolved_model else ""
+            logger.info(
+                "Forwarding %s %s -> %s (auth=%s%s%s)",
+                ctx.method,
+                ctx.path,
+                ctx.target_url,
+                auth_present,
+                model_label,
+                f" attempt={attempt}" if attempt > 0 else "",
             )
-        except httpx.RequestError as exc:
-            logger.error("Upstream request failed (attempt %d): %s", attempt, exc)
+
+            if ctx.send_content and ctx.content_type.startswith("application/json"):
+                if logger.isEnabledFor(logging.DEBUG):
+                    try:
+                        _dbg = json.loads(ctx.send_content)
+                        if isinstance(_dbg, dict) and "messages" in _dbg:
+                            struct = []
+                            for m in _dbg["messages"]:
+                                c = m.get("content")
+                                if isinstance(c, list):
+                                    struct.append(
+                                        f"{m.get('role')}:[{','.join(b.get('type', '?') for b in c if isinstance(b, dict))}]"
+                                    )
+                                else:
+                                    struct.append(f"{m.get('role')}:str")
+                            logger.debug("Msg structure: %s", " | ".join(struct))
+                    except Exception:
+                        logger.exception("Debug message structure logging failed")
+
+            try:
+                assert ctx.target_url is not None
+                upstream_resp = await client.send(
+                    client.build_request(ctx.method, ctx.target_url, headers=ctx.headers, content=ctx.send_content),
+                    stream=True,
+                )
+            except httpx.RequestError as exc:
+                logger.error("Upstream request failed (attempt %d): %s", attempt, exc)
+                _req_failed = True
+                break  # exit key loop; outer loop handles continuation
+
+            # ── Key rotation on any error response (free-auto models only) ───────
+            if upstream_resp.status_code >= 400 and model in FREE_AUTO_MODELS and pool.has_keys():
+                pool.demote(_active_key, model)
+                _next_key = pool.get_key(model)
+                if _next_key and _next_key != _active_key:
+                    logger.warning(
+                        "key-pool: key[%d] got %d for %s — rotating to key[%d]",
+                        pool._key_index(_active_key),
+                        upstream_resp.status_code,
+                        model,
+                        pool._key_index(_next_key),
+                    )
+                    await upstream_resp.aclose()
+                    _active_key = _next_key
+                    continue  # retry same model with next key
+
+            break  # success or unrecoverable — exit key loop
+
+        # ── Handle network-level request failure ───────────────────────────────
+        if _req_failed:
             if attempt < len(candidates) - 1:
-                continue
+                continue  # try next model candidate
             return JSONResponse({"error": "upstream request failed"}, status_code=502)
 
         # Retryable upstream error — try next fallback if available
@@ -365,7 +417,10 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
                     err_snippet = (await upstream_resp.aread()).decode("utf-8", errors="replace")[:200]
                 logger.warning(
                     "Upstream %d on attempt %d (%s) — trying fallback: %s",
-                    upstream_resp.status_code, attempt, model, err_snippet,
+                    upstream_resp.status_code,
+                    attempt,
+                    model,
+                    err_snippet,
                 )
             except Exception:
                 pass
@@ -375,9 +430,7 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
 
         # ── Build response headers ────────────────────────────────────────────
         excluded_headers = {"content-encoding", "transfer-encoding", "content-length", "connection"}
-        response_headers = {
-            k: v for k, v in upstream_resp.headers.items() if k.lower() not in excluded_headers
-        }
+        response_headers = {k: v for k, v in upstream_resp.headers.items() if k.lower() not in excluded_headers}
         if req_id:
             response_headers.setdefault("x-request-id", req_id)
 
@@ -405,16 +458,14 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
         # ── Protocol-converted response ───────────────────────────────────────
         if ctx.is_google:
             # Google streaming responses use text/event-stream, or we can check the URL
-            is_stream = (
-                upstream_resp.headers.get("content-type", "").startswith("text/event-stream")
-                or "streamGenerateContent" in (ctx.target_url or "")
-            )
+            is_stream = upstream_resp.headers.get("content-type", "").startswith(
+                "text/event-stream"
+            ) or "streamGenerateContent" in (ctx.target_url or "")
             if is_stream:
+
                 async def converted_stream():
                     try:
-                        async for chunk in _google_stream_to_anthropic(
-                            upstream_resp, ctx.resolved_model or ""
-                        ):
+                        async for chunk in _google_stream_to_anthropic(upstream_resp, ctx.resolved_model or ""):
                             yield chunk
                     except Exception as exc:
                         logger.error("Google GenAI stream conversion error: %s", exc)
@@ -439,11 +490,10 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
         if ctx.need_protocol_conv:
             is_stream = upstream_resp.headers.get("content-type", "").startswith("text/event-stream")
             if is_stream:
+
                 async def converted_stream():
                     try:
-                        async for chunk in _openai_stream_to_anthropic(
-                            upstream_resp, ctx.resolved_model or ""
-                        ):
+                        async for chunk in _openai_stream_to_anthropic(upstream_resp, ctx.resolved_model or ""):
                             yield chunk
                     except Exception as exc:
                         logger.error("Stream conversion error: %s", exc)
@@ -491,6 +541,7 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
 # Public entry point
 # ---------------------------------------------------------------------------
 
+
 async def forward_request(request: Request) -> Response:
     """Coordinate the full proxy pipeline for a single inbound request."""
     auth_err = check_auth(request)
@@ -498,9 +549,7 @@ async def forward_request(request: Request) -> Response:
         return auth_err
 
     content = await request.body()
-    headers = {
-        k: v for k, v in request.headers.items() if k.lower() not in _DROP_HEADERS
-    }
+    headers = {k: v for k, v in request.headers.items() if k.lower() not in _DROP_HEADERS}
 
     if "x-request-id" not in headers:
         headers["x-request-id"] = str(uuid.uuid4())
@@ -518,6 +567,7 @@ async def forward_request(request: Request) -> Response:
     )
 
     from observability.stats import record
+
     _t_start = time.monotonic()
 
     _t_sanitize = time.monotonic()
@@ -535,9 +585,12 @@ async def forward_request(request: Request) -> Response:
     status = getattr(response, "status_code", 0)
     logger.info(
         "req=%s total=%dms sanitize=%dms forward=%dms model=%s status=%d",
-        headers["x-request-id"][:8], _total_ms, _sanitize_ms, _forward_ms,
-        ctx.resolved_model or "unknown", status,
+        headers["x-request-id"][:8],
+        _total_ms,
+        _sanitize_ms,
+        _forward_ms,
+        ctx.resolved_model or "unknown",
+        status,
     )
     record(ctx.resolved_model or "unknown", status, _total_ms)
     return response
-

@@ -19,6 +19,7 @@ from conversion.streaming import _openai_stream_to_anthropic
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 class MockResponse:
     """Minimal stub for an httpx streaming response."""
 
@@ -75,6 +76,7 @@ def event_types(events: list[dict]) -> list[str]:
 # Tests: plain text streaming
 # ---------------------------------------------------------------------------
 
+
 class TestPlainTextStreaming:
     @pytest.mark.asyncio
     async def test_emits_message_start(self):
@@ -106,9 +108,9 @@ class TestPlainTextStreaming:
         ]
         events = await collect_events(chunks)
         text_deltas = [
-            e for e in events
-            if e.get("type") == "content_block_delta"
-            and e.get("delta", {}).get("type") == "text_delta"
+            e
+            for e in events
+            if e.get("type") == "content_block_delta" and e.get("delta", {}).get("type") == "text_delta"
         ]
         combined = "".join(e["delta"]["text"] for e in text_deltas)
         assert combined == "Hello world"
@@ -155,23 +157,44 @@ class TestPlainTextStreaming:
 # Tests: tool call streaming
 # ---------------------------------------------------------------------------
 
+
 class TestToolCallStreaming:
     @pytest.mark.asyncio
     async def test_emits_tool_use_content_block_start(self):
         chunks = [
-            sse({"choices": [{"delta": {"tool_calls": [
-                {"index": 0, "id": "call_abc", "function": {"name": "search", "arguments": ""}}
-            ]}, "finish_reason": None}]}),
-            sse({"choices": [{"delta": {"tool_calls": [
-                {"index": 0, "function": {"arguments": '{"q":"test"}'}}
-            ]}, "finish_reason": None}]}),
+            sse(
+                {
+                    "choices": [
+                        {
+                            "delta": {
+                                "tool_calls": [
+                                    {"index": 0, "id": "call_abc", "function": {"name": "search", "arguments": ""}}
+                                ]
+                            },
+                            "finish_reason": None,
+                        }
+                    ]
+                }
+            ),
+            sse(
+                {
+                    "choices": [
+                        {
+                            "delta": {"tool_calls": [{"index": 0, "function": {"arguments": '{"q":"test"}'}}]},
+                            "finish_reason": None,
+                        }
+                    ]
+                }
+            ),
             delta_chunk(finish_reason="tool_calls"),
         ]
         events = await collect_events(chunks)
         tool_start = next(
-            (e for e in events
-             if e.get("type") == "content_block_start"
-             and e.get("content_block", {}).get("type") == "tool_use"),
+            (
+                e
+                for e in events
+                if e.get("type") == "content_block_start" and e.get("content_block", {}).get("type") == "tool_use"
+            ),
             None,
         )
         assert tool_start is not None
@@ -181,19 +204,39 @@ class TestToolCallStreaming:
     @pytest.mark.asyncio
     async def test_tool_arguments_emitted_as_input_json_delta(self):
         chunks = [
-            sse({"choices": [{"delta": {"tool_calls": [
-                {"index": 0, "id": "call_x", "function": {"name": "fn", "arguments": ""}}
-            ]}, "finish_reason": None}]}),
-            sse({"choices": [{"delta": {"tool_calls": [
-                {"index": 0, "function": {"arguments": '{"a":1}'}}
-            ]}, "finish_reason": None}]}),
+            sse(
+                {
+                    "choices": [
+                        {
+                            "delta": {
+                                "tool_calls": [
+                                    {"index": 0, "id": "call_x", "function": {"name": "fn", "arguments": ""}}
+                                ]
+                            },
+                            "finish_reason": None,
+                        }
+                    ]
+                }
+            ),
+            sse(
+                {
+                    "choices": [
+                        {
+                            "delta": {"tool_calls": [{"index": 0, "function": {"arguments": '{"a":1}'}}]},
+                            "finish_reason": None,
+                        }
+                    ]
+                }
+            ),
             delta_chunk(finish_reason="tool_calls"),
         ]
         events = await collect_events(chunks)
         arg_delta = next(
-            (e for e in events
-             if e.get("type") == "content_block_delta"
-             and e.get("delta", {}).get("type") == "input_json_delta"),
+            (
+                e
+                for e in events
+                if e.get("type") == "content_block_delta" and e.get("delta", {}).get("type") == "input_json_delta"
+            ),
             None,
         )
         assert arg_delta is not None
@@ -202,9 +245,18 @@ class TestToolCallStreaming:
     @pytest.mark.asyncio
     async def test_tool_calls_stop_reason_maps_to_tool_use(self):
         chunks = [
-            sse({"choices": [{"delta": {"tool_calls": [
-                {"index": 0, "id": "c", "function": {"name": "f", "arguments": ""}}
-            ]}, "finish_reason": None}]}),
+            sse(
+                {
+                    "choices": [
+                        {
+                            "delta": {
+                                "tool_calls": [{"index": 0, "id": "c", "function": {"name": "f", "arguments": ""}}]
+                            },
+                            "finish_reason": None,
+                        }
+                    ]
+                }
+            ),
             delta_chunk(finish_reason="tool_calls"),
         ]
         events = await collect_events(chunks)
@@ -214,9 +266,18 @@ class TestToolCallStreaming:
     @pytest.mark.asyncio
     async def test_content_block_stop_emitted_after_tool_use(self):
         chunks = [
-            sse({"choices": [{"delta": {"tool_calls": [
-                {"index": 0, "id": "c", "function": {"name": "f", "arguments": ""}}
-            ]}, "finish_reason": None}]}),
+            sse(
+                {
+                    "choices": [
+                        {
+                            "delta": {
+                                "tool_calls": [{"index": 0, "id": "c", "function": {"name": "f", "arguments": ""}}]
+                            },
+                            "finish_reason": None,
+                        }
+                    ]
+                }
+            ),
             delta_chunk(finish_reason="tool_calls"),
         ]
         events = await collect_events(chunks)
@@ -227,20 +288,30 @@ class TestToolCallStreaming:
 # Tests: mixed text + tool call
 # ---------------------------------------------------------------------------
 
+
 class TestMixedTextAndToolCall:
     @pytest.mark.asyncio
     async def test_both_text_and_tool_blocks_emitted(self):
         chunks = [
             delta_chunk(content="Calling tool..."),
-            sse({"choices": [{"delta": {"tool_calls": [
-                {"index": 0, "id": "c1", "function": {"name": "search", "arguments": ""}}
-            ]}, "finish_reason": None}]}),
+            sse(
+                {
+                    "choices": [
+                        {
+                            "delta": {
+                                "tool_calls": [
+                                    {"index": 0, "id": "c1", "function": {"name": "search", "arguments": ""}}
+                                ]
+                            },
+                            "finish_reason": None,
+                        }
+                    ]
+                }
+            ),
             delta_chunk(finish_reason="tool_calls"),
         ]
         events = await collect_events(chunks)
-        block_starts = [
-            e for e in events if e.get("type") == "content_block_start"
-        ]
+        block_starts = [e for e in events if e.get("type") == "content_block_start"]
         block_types = [e.get("content_block", {}).get("type") for e in block_starts]
         assert "text" in block_types
         assert "tool_use" in block_types
@@ -249,6 +320,7 @@ class TestMixedTextAndToolCall:
 # ---------------------------------------------------------------------------
 # Tests: empty stream
 # ---------------------------------------------------------------------------
+
 
 class TestEmptyStream:
     @pytest.mark.asyncio
@@ -269,9 +341,11 @@ class TestEmptyStream:
         chunks = [b"data: [DONE]\n\n"]
         events = await collect_events(chunks)
         text_start = next(
-            (e for e in events
-             if e.get("type") == "content_block_start"
-             and e.get("content_block", {}).get("type") == "text"),
+            (
+                e
+                for e in events
+                if e.get("type") == "content_block_start" and e.get("content_block", {}).get("type") == "text"
+            ),
             None,
         )
         assert text_start is not None
@@ -280,6 +354,7 @@ class TestEmptyStream:
 # ---------------------------------------------------------------------------
 # Tests: error resilience (P0 #4)
 # ---------------------------------------------------------------------------
+
 
 class TestErrorResilience:
     @pytest.mark.asyncio
@@ -302,9 +377,9 @@ class TestErrorResilience:
         ]
         events = await collect_events(chunks)
         text_deltas = [
-            e for e in events
-            if e.get("type") == "content_block_delta"
-            and e.get("delta", {}).get("type") == "text_delta"
+            e
+            for e in events
+            if e.get("type") == "content_block_delta" and e.get("delta", {}).get("type") == "text_delta"
         ]
         assert any("hello" in e["delta"]["text"] for e in text_deltas)
 

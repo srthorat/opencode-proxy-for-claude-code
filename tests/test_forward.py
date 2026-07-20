@@ -4,7 +4,6 @@ Exercises path rewriting, /v1 deduplication, and query-string stripping in
 isolation by constructing a minimal RequestContext and asserting ctx.target_url.
 """
 
-
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -16,6 +15,7 @@ from forward import _build_target_url, _forward_to_upstream
 # ---------------------------------------------------------------------------
 # Helper
 # ---------------------------------------------------------------------------
+
 
 def make_ctx(**overrides) -> RequestContext:
     """Return a minimal RequestContext suitable for _build_target_url tests."""
@@ -37,6 +37,7 @@ def make_ctx(**overrides) -> RequestContext:
 # ---------------------------------------------------------------------------
 # TestBuildTargetUrl
 # ---------------------------------------------------------------------------
+
 
 class TestBuildTargetUrl:
     # ── /v1/messages ────────────────────────────────────────────────────────
@@ -162,6 +163,7 @@ class TestBuildTargetUrl:
 # TestFallbackRouting
 # ---------------------------------------------------------------------------
 
+
 class TestFallbackRouting:
     @pytest.mark.asyncio
     async def test_fallback_routing_uses_config_key(self):
@@ -199,7 +201,12 @@ class TestFallbackRouting:
                 mock_resolve.side_effect = lambda m: (
                     ("big-pickle", "https://opencode.ai/zen/v1", "mock-key", None)
                     if m == "big-pickle"
-                    else ("gemma-4-31b-it", "https://generativelanguage.googleapis.com", "mock-key", "free_coders/image+reasoning")
+                    else (
+                        "gemma-4-31b-it",
+                        "https://generativelanguage.googleapis.com",
+                        "mock-key",
+                        "free_coders/image+reasoning",
+                    )
                 )
 
                 _build_target_url(ctx)
@@ -209,4 +216,3 @@ class TestFallbackRouting:
         assert resp.status_code == 200
         # Assert that the client was called twice
         assert mock_client.send.call_count == 2
-

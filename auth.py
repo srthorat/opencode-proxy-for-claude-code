@@ -18,7 +18,7 @@ def check_auth(request: Request) -> JSONResponse | None:
     if not PROXY_API_KEY:
         return None
     auth_header = request.headers.get("authorization", "")
-    provided = auth_header[len("Bearer "):].strip() if auth_header.startswith("Bearer ") else ""
+    provided = auth_header[len("Bearer ") :].strip() if auth_header.startswith("Bearer ") else ""
     if not hmac.compare_digest(provided.encode(), PROXY_API_KEY.encode()):
         return JSONResponse({"error": "unauthorized"}, status_code=401)
     return None

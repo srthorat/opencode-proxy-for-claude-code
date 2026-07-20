@@ -1,5 +1,6 @@
 """Tests for conversion/request.py (_anthropic_to_openai) and
 conversion/response.py (_openai_to_anthropic)."""
+
 import json
 
 from conversion.request import _anthropic_to_openai
@@ -8,6 +9,7 @@ from conversion.response import _openai_to_anthropic
 # ---------------------------------------------------------------------------
 # _anthropic_to_openai
 # ---------------------------------------------------------------------------
+
 
 class TestAnthropicToOpenAI:
     def test_basic_string_message(self):
@@ -191,9 +193,7 @@ class TestAnthropicToOpenAI:
     def test_single_text_block_becomes_plain_string(self):
         payload = {
             "model": "test-model",
-            "messages": [
-                {"role": "user", "content": [{"type": "text", "text": "hello"}]}
-            ],
+            "messages": [{"role": "user", "content": [{"type": "text", "text": "hello"}]}],
         }
         result = _anthropic_to_openai(payload)
         assert result["messages"][0]["content"] == "hello"
@@ -274,6 +274,7 @@ class TestAnthropicToOpenAI:
 # ---------------------------------------------------------------------------
 # _openai_to_anthropic
 # ---------------------------------------------------------------------------
+
 
 class TestOpenAIToAnthropic:
     def test_basic_text_response(self):

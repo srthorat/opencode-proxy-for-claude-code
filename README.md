@@ -181,23 +181,18 @@ Set `"model"` in `~/.claude/settings.json`:
 
 | Setting | What happens | Cost |
 |---|---|---|
-| `go-all` | Proxy picks the best model from the full pool (includes GLM) | Paid |
-| `go-auto` | Proxy picks the best paid model for each task | Paid |
-| `free-global-auto` / `free-global` | Proxy picks the best free model from global providers (Gemma, Cohere) | Free |
-| `free-auto` | Proxy picks the best free model for each task | Free |
-| `claude-haiku-*` | Same as `free-auto` | Free |
-| `claude-sonnet-*`, `claude-opus-*` | Same as `go-auto` | Paid |
-| `kimi-k2.7`, `qwen3.7-max`, … | Pin to a specific model | Paid |
+| `go-auto` / `go-all` / `go` | Proxy routes across all 16 OpenCode Go paid models based on complexity (`grok-4.5`, `kimi-k3`, `deepseek-v4-pro`, `qwen3.7-max`, `minimax-m3`, etc.) | Paid |
+| `free-global` / `free-global-auto` | Proxy picks from verified free global open-source providers (Gemma, Cohere) | Free |
+| `free-auto` / `free-all` / `free` | Proxy picks the best free OpenCode model with automatic 5-key pool rotation | Free |
+| `claude-haiku-*` | Auto-mapped to `free-auto` | Free |
+| `claude-sonnet-*`, `claude-opus-*` | Auto-mapped to `go-auto` | Paid |
+| `opencode-go/kimi-k3`, `grok-4.5`, … | Pin directly to a specific model | Paid |
 
-**How `go-auto` works:** Each request is classified by task type (code, reasoning, long context, creative, agent) and routed to the best-suited model. A coding question goes to `kimi-k2.7`, an architecture discussion goes to `deepseek-v4-pro`, a long document summary goes to `minimax-m3`.
+**How `go-auto` / `go-all` works:** Each request is classified by task category and prompt complexity level (Level 1–4). Flagship tasks route to Level 4 models (`grok-4.5` for reasoning/general, `kimi-k3` for code), while simpler tasks route to lighter models (`glm-5.1`, `kimi-k2.6`), preserving your flagship token budget.
 
-**How `go-all` works:** Similar to `go-auto`, but utilizes the full pool of all 14 supported models by classifying the query into a task category and a complexity level (3 for flagship models, 2 for intermediate/alternate models like `glm-5.2` and `kimi-k2.6`, and 1 for simple fallbacks like `glm-5.1` and `minimax-m2.5`).
-
-**How `free-global-auto` works:** Dynamic routing for the free global tier, leveraging global open-source models:
-* Coding/Reasoning tasks route to `cohere/north-mini-code-free` (via OpenRouter, requires `OPENROUTER_API_KEY`)
-* Creative, image, and reasoning tasks route to `google/gemma-4-31b-it` (directly via Google's AI Studio REST API for maximum performance, requires `GOOGLE_API_KEY`)
-
-**Fallback chains:** If a model returns an error (rate limit, timeout, 5xx), the proxy automatically retries with the next model in the chain — no interruption to your session.
+**Key Pool & Fallback Isolation:**
+* **5-Key Probing & Rotation:** Up to 5 keys (`OPENCODE_API_KEY`, `OPENCODE_API_KEY_2`..`5`) are probed at startup and continuously every 60 seconds. On any `4xx` or `5xx` response, the proxy rotates to the next healthy key in the pool before attempting model fallbacks. Inspect status at `/admin/key-health`.
+* **Strict Fallback Boundaries:** Paid (`go`) models fall back **strictly to other paid Go models**; they never fall back to free endpoints. Free tiers fall back strictly to zero-cost models. automatically retries with the next model in the chain — no interruption to your session.
 
 ---
 

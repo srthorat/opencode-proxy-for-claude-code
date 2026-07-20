@@ -73,17 +73,43 @@ def _keyword_fallback(text: str, num_turns: int) -> tuple[str, str]:
     chars = len(text)
     has_block = "```" in text
     code_hits = sum(
-        1 for w in (
-            "def ", "class ", "function", "debug", "error", "bug",
-            "implement", "refactor", "sql", "regex", "algorithm",
-            "dockerfile", "import ", "module", "api", "endpoint",
+        1
+        for w in (
+            "def ",
+            "class ",
+            "function",
+            "debug",
+            "error",
+            "bug",
+            "implement",
+            "refactor",
+            "sql",
+            "regex",
+            "algorithm",
+            "dockerfile",
+            "import ",
+            "module",
+            "api",
+            "endpoint",
         )
         if w in low
     )
     if has_block or code_hits >= 2:
         return "go", "code"
-    if any(w in low for w in ("explain", "analyze", "compare", "tradeoff", "architecture",
-                               "math", "proof", "calculate", "step by step")):
+    if any(
+        w in low
+        for w in (
+            "explain",
+            "analyze",
+            "compare",
+            "tradeoff",
+            "architecture",
+            "math",
+            "proof",
+            "calculate",
+            "step by step",
+        )
+    ):
         return "go", "reasoning"
     if chars > 3000 or num_turns > 8:
         return "go", "long"
@@ -134,6 +160,7 @@ def map_claude_model_name(model_name: str) -> str:
 # P4 #24: URL validation for MODEL_MAP entries
 # ---------------------------------------------------------------------------
 
+
 def _is_safe_url(url: str) -> bool:
     """Return True if url is a valid http/https URL (non-empty, correct scheme).
 
@@ -160,11 +187,9 @@ def resolve_model_config(name: str):
 
     # direct:<model> — bypass OpenCode entirely, forward to DIRECT_URL with DIRECT_KEY
     if key.startswith("direct:"):
-        upstream_model = key[len("direct:"):].strip()
+        upstream_model = key[len("direct:") :].strip()
         if not upstream_model:
-            logger.warning(
-                "direct: prefix used with empty model name — request will likely fail upstream"
-            )
+            logger.warning("direct: prefix used with empty model name — request will likely fail upstream")
         if not DIRECT_URL:
             logger.warning(
                 "direct:%s requested but DIRECT_URL is not set — falling back to UPSTREAM_URL",
@@ -175,14 +200,14 @@ def resolve_model_config(name: str):
     entry = MODEL_MAP.get(key)
     if entry is None:
         if key.startswith("opencode-go/"):
-            alt_key = key[len("opencode-go/"):]
+            alt_key = key[len("opencode-go/") :]
         else:
             alt_key = f"opencode-go/{key}"
         entry = MODEL_MAP.get(alt_key)
 
     upstream_model = key.replace(" ", "-")
     if upstream_model.startswith("opencode-go/"):
-        upstream_model = upstream_model[len("opencode-go/"):]
+        upstream_model = upstream_model[len("opencode-go/") :]
 
     upstream_url = UPSTREAM_URL
     upstream_api_key = UPSTREAM_API_KEY
@@ -195,7 +220,7 @@ def resolve_model_config(name: str):
     if isinstance(entry, str):
         upstream_model = entry
         if upstream_model.startswith("opencode-go/"):
-            upstream_model = upstream_model[len("opencode-go/"):]
+            upstream_model = upstream_model[len("opencode-go/") :]
         return upstream_model, upstream_url, upstream_api_key, role
 
     # otherwise expect a dict
@@ -207,7 +232,7 @@ def resolve_model_config(name: str):
         if isinstance(model_val, str) and model_val:
             upstream_model = model_val
             if upstream_model.startswith("opencode-go/"):
-                upstream_model = upstream_model[len("opencode-go/"):]
+                upstream_model = upstream_model[len("opencode-go/") :]
 
         # url handling: allow literal placeholders
         url_val = entry.get("url")
@@ -220,9 +245,9 @@ def resolve_model_config(name: str):
             elif not _is_safe_url(url_val):
                 # P4 #24: reject URLs that don't start with http:// or https://
                 logger.warning(
-                    "MODEL_MAP entry %r has invalid url %r (must start with http:// or "
-                    "https://) — using UPSTREAM_URL",
-                    key, url_val,
+                    "MODEL_MAP entry %r has invalid url %r (must start with http:// or https://) — using UPSTREAM_URL",
+                    key,
+                    url_val,
                 )
                 # upstream_url stays as UPSTREAM_URL
             else:
@@ -268,24 +293,19 @@ async def auto_select_model(
     # this is an agentic loop. Route to the dedicated agent model.
     if has_tools:
         _tool_block_count = sum(
-            1 for msg in messages
-            for block in (
-                msg.get("content") if isinstance(msg.get("content"), list) else []
-            )
+            1
+            for msg in messages
+            for block in (msg.get("content") if isinstance(msg.get("content"), list) else [])
             if isinstance(block, dict) and block.get("type") in ("tool_use", "tool_result")
         )
         if _tool_block_count >= 2:  # at least one completed tool-call round
             _eff_tier = forced_tier or "go"
             if _eff_tier == "go":
                 chosen = CODER_MAP_GO["agent"]
-                logger.info(
-                    "auto-router: agent mode (%d tool blocks) → %s", _tool_block_count, chosen
-                )
+                logger.info("auto-router: agent mode (%d tool blocks) → %s", _tool_block_count, chosen)
             elif _eff_tier == "go-all":
                 chosen = CODER_MAP_GO_ALL["agent"]
-                logger.info(
-                    "auto-router: agent mode (%d tool blocks) → %s", _tool_block_count, chosen
-                )
+                logger.info("auto-router: agent mode (%d tool blocks) → %s", _tool_block_count, chosen)
             elif _eff_tier == "free-global":
                 chosen = CODER_MAP_FREE_GLOBAL["tier1"]
                 logger.info(
@@ -305,14 +325,27 @@ async def auto_select_model(
 
     # Fast pre-check: code blocks or strong code signals skip LLM entirely
     low = text.lower()
-    if "```" in text or sum(
-        1 for w in (
-            "def ", "class ", "function", "algorithm",
-            "implement", "refactor", "debug", "traceback",
-            "leetcode", "quicksort", "recursion",
+    if (
+        "```" in text
+        or sum(
+            1
+            for w in (
+                "def ",
+                "class ",
+                "function",
+                "algorithm",
+                "implement",
+                "refactor",
+                "debug",
+                "traceback",
+                "leetcode",
+                "quicksort",
+                "recursion",
+            )
+            if w in low
         )
-        if w in low
-    ) >= 2:
+        >= 2
+    ):
         if forced_tier == "free":
             chosen = CODER_MAP_FREE.get("simple", CODER_MAP_FREE["simple"])
             logger.info("auto-router[precheck]: forced_tier=free category=code → %s", chosen)
@@ -363,7 +396,7 @@ async def auto_select_model(
                     "model": classifier,
                     "messages": [
                         {"role": "system", "content": CLASSIFIER_SYSTEM},
-                        {"role": "user",   "content": text_short},
+                        {"role": "user", "content": text_short},
                     ],
                     "max_tokens": 30,
                     "temperature": 0,
@@ -376,11 +409,11 @@ async def auto_select_model(
                 # parse first JSON object in the response
                 start, end = raw.find("{"), raw.rfind("}")
                 if start != -1 and end != -1:
-                    parsed = json.loads(raw[start:end + 1])
-                    tier     = parsed.get("tier", tier).strip().lower()
+                    parsed = json.loads(raw[start : end + 1])
+                    tier = parsed.get("tier", tier).strip().lower()
                     category = parsed.get("category", category).strip().lower()
-                    level    = int(parsed.get("level", 3))
-                    method   = "llm"
+                    level = int(parsed.get("level", 3))
+                    method = "llm"
                     # P1 #7: Store successful classification in cache.
                     if len(_clf_cache) >= _CLF_CACHE_MAX:
                         oldest = next(iter(_clf_cache))
@@ -402,13 +435,10 @@ async def auto_select_model(
         chosen = CODER_MAP_FREE.get(category, CODER_MAP_FREE["simple"])
     elif tier == "free-global":
         chosen = CODER_MAP_FREE_GLOBAL.get(category, CODER_MAP_FREE_GLOBAL["tier1"])
-    elif tier == "go-all":
+    else:
+        # Paid tier (go / go-auto / go-all) — routes across all 16 paid models via level
         key_with_level = f"{category}:{level}"
         chosen = CODER_MAP_GO_ALL.get(key_with_level, CODER_MAP_GO_ALL.get(category, CODER_MAP_GO_ALL["general"]))
-    else:
-        chosen = CODER_MAP_GO.get(category, CODER_MAP_GO["general"])
 
-    logger.info(
-        "auto-router[%s]: tier=%s category=%s → %s", method, tier, category, chosen
-    )
+    logger.info("auto-router[%s]: tier=%s category=%s → %s", method, tier, category, chosen)
     return chosen
