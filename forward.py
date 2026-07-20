@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from auth import check_auth
 from client import get_client
-from config import _ANTHROPIC_COMPAT_MODELS, FREE_AUTO_MODELS, MODEL_MAP, UPSTREAM_API_KEY, UPSTREAM_URL
+from config import _ANTHROPIC_COMPAT_MODELS, FREE_AUTO_MODELS, GO_API_KEY, MODEL_MAP, UPSTREAM_API_KEY, UPSTREAM_URL
 from context import RequestContext
 from conversion.google import _anthropic_to_google, _google_stream_to_anthropic, _google_to_anthropic
 from conversion.request import _anthropic_to_openai
@@ -121,6 +121,9 @@ async def _sanitize_and_route(ctx: RequestContext) -> None:
             ctx.config_model_key = incoming_model
             ctx.per_request_upstream_url = upstream_url or UPSTREAM_URL
             ctx.per_request_upstream_api_key = upstream_api_key or UPSTREAM_API_KEY
+            # Go-tier isolation: always use the dedicated go key for /zen/go/ requests.
+            if GO_API_KEY and "/zen/go" in (ctx.per_request_upstream_url or ""):
+                ctx.per_request_upstream_api_key = GO_API_KEY
             ctx.is_google = (
                 isinstance(ctx.per_request_upstream_url, str)
                 and "generativelanguage.googleapis.com" in ctx.per_request_upstream_url

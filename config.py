@@ -22,8 +22,13 @@ PROXY_API_KEY: str | None = os.getenv("PROXY_API_KEY")
 DIRECT_URL: str = os.getenv("DIRECT_URL", "").rstrip("/")
 DIRECT_KEY: str | None = os.getenv("DIRECT_KEY")
 
-# Ordered list of all OpenCode API keys for free-auto key rotation.
-# Primary key + up to 4 additional keys via OPENCODE_API_KEY_2 … _5.
+# Dedicated key for the go (paid) tier — isolated from the free-tier key pool.
+# Set OPENCODE_GO_API_KEY in .env; if absent, falls back to UPSTREAM_API_KEY.
+GO_API_KEY: str | None = os.getenv("OPENCODE_GO_API_KEY") or UPSTREAM_API_KEY
+
+# Ordered list of OpenCode API keys for free-auto key rotation.
+# Keys 1-4 only — KEY_5 is reserved as the go-tier key (OPENCODE_GO_API_KEY).
+# Add more free keys by appending OPENCODE_API_KEY_2 … _4 in .env.
 UPSTREAM_API_KEYS: list[str] = [
     k
     for k in [
@@ -31,7 +36,6 @@ UPSTREAM_API_KEYS: list[str] = [
         os.getenv("OPENCODE_API_KEY_2"),
         os.getenv("OPENCODE_API_KEY_3"),
         os.getenv("OPENCODE_API_KEY_4"),
-        os.getenv("OPENCODE_API_KEY_5"),
     ]
     if k
 ]
