@@ -25,7 +25,7 @@ import logging
 
 import httpx
 
-from config import FREE_AUTO_MODELS, OPENCODE_FREE_URL, UPSTREAM_API_KEYS
+from .config import FREE_AUTO_MODELS, OPENCODE_FREE_URL, UPSTREAM_API_KEYS
 
 logger = logging.getLogger("opencode-proxy")
 

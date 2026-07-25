@@ -4,7 +4,7 @@ import logging
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-from config import PROXY_API_KEY
+from .config import PROXY_API_KEY
 
 logger = logging.getLogger("opencode-proxy")
 

@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 
 # Import the FastAPI app — main.py registers all routes.
-from main import app
+from opencode_proxy.main import app
 
 # ---------------------------------------------------------------------------
 # Shared test client helper
@@ -173,7 +173,7 @@ class TestRequestSizeLimit:
 
 class TestAuthRejection:
     def test_rejects_without_bearer_when_proxy_key_set(self):
-        with patch("auth.PROXY_API_KEY", "test-secret"):
+        with patch("opencode_proxy.auth.PROXY_API_KEY", "test-secret"):
             client = get_client()
             resp = client.post(
                 "/v1/messages",
@@ -182,7 +182,7 @@ class TestAuthRejection:
         assert resp.status_code == 401
 
     def test_rejection_returns_error_json(self):
-        with patch("auth.PROXY_API_KEY", "test-secret"):
+        with patch("opencode_proxy.auth.PROXY_API_KEY", "test-secret"):
             client = get_client()
             resp = client.post(
                 "/v1/messages",
@@ -191,7 +191,7 @@ class TestAuthRejection:
         assert resp.json().get("error") == "unauthorized"
 
     def test_rejects_wrong_key(self):
-        with patch("auth.PROXY_API_KEY", "correct-secret"):
+        with patch("opencode_proxy.auth.PROXY_API_KEY", "correct-secret"):
             client = get_client()
             resp = client.post(
                 "/v1/messages",
@@ -202,7 +202,7 @@ class TestAuthRejection:
 
     def test_passes_with_correct_key(self):
         """Correct bearer token must pass auth (even if upstream fails)."""
-        with patch("auth.PROXY_API_KEY", "correct-secret"):
+        with patch("opencode_proxy.auth.PROXY_API_KEY", "correct-secret"):
             # Mock the upstream to avoid real HTTP
             mock_resp = MagicMock()
             mock_resp.status_code = 200
@@ -221,7 +221,7 @@ class TestAuthRejection:
             mock_client.build_request.return_value = MagicMock()
             mock_client.send = AsyncMock(return_value=mock_resp)
 
-            with patch("forward.get_client", AsyncMock(return_value=mock_client)):
+            with patch("opencode_proxy.forward.get_client", AsyncMock(return_value=mock_client)):
                 client = get_client()
                 resp = client.post(
                     "/v1/messages",
@@ -236,7 +236,7 @@ class TestAuthRejection:
 
     def test_no_auth_required_when_proxy_key_not_set(self):
         """When PROXY_API_KEY is not configured, every request is allowed."""
-        with patch("auth.PROXY_API_KEY", None):
+        with patch("opencode_proxy.auth.PROXY_API_KEY", None):
             # Use count_tokens — no upstream needed
             client = get_client()
             resp = client.post(
@@ -272,7 +272,7 @@ class TestProxyRoute:
         }
         mock_client = self._make_mock_client(oai_response)
 
-        with patch("forward.get_client", AsyncMock(return_value=mock_client)):
+        with patch("opencode_proxy.forward.get_client", AsyncMock(return_value=mock_client)):
             client = get_client()
             resp = client.post(
                 "/v1/messages",
@@ -292,7 +292,7 @@ class TestProxyRoute:
         }
         mock_client = self._make_mock_client(oai_response)
 
-        with patch("forward.get_client", AsyncMock(return_value=mock_client)):
+        with patch("opencode_proxy.forward.get_client", AsyncMock(return_value=mock_client)):
             client = get_client()
             resp = client.post(
                 "/v1/messages",
@@ -317,7 +317,7 @@ class TestProxyRoute:
         mock_client.build_request.return_value = MagicMock()
         mock_client.send = AsyncMock(return_value=mock_resp)
 
-        with patch("forward.get_client", AsyncMock(return_value=mock_client)):
+        with patch("opencode_proxy.forward.get_client", AsyncMock(return_value=mock_client)):
             client = get_client()
             resp = client.post(
                 "/v1/messages",

@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from context import RequestContext
-from forward import _build_target_url, _forward_to_upstream
+from opencode_proxy.context import RequestContext
+from opencode_proxy.forward import _build_target_url, _forward_to_upstream
 
 # ---------------------------------------------------------------------------
 # Helper
@@ -196,8 +196,8 @@ class TestFallbackRouting:
         # First send returns 429, second returns 200
         mock_client.send = AsyncMock(side_effect=[mock_resp_429, mock_resp_200])
 
-        with patch("forward.get_client", AsyncMock(return_value=mock_client)):
-            with patch("forward.resolve_model_config") as mock_resolve:
+        with patch("opencode_proxy.forward.get_client", AsyncMock(return_value=mock_client)):
+            with patch("opencode_proxy.forward.resolve_model_config") as mock_resolve:
                 # Mock resolve_model_config for north-mini-code-free fallback
                 mock_resolve.side_effect = lambda m: (
                     ("north-mini-code-free", "https://api.opencode.ai/zen/v1", "mock-key", "free_coders/simple+classifier")
@@ -248,8 +248,8 @@ class TestFallbackRouting:
         mock_client.build_request.return_value = MagicMock()
         mock_client.send = AsyncMock(side_effect=[mock_resp_401, mock_resp_200])
 
-        with patch("forward.get_client", AsyncMock(return_value=mock_client)):
-            with patch("forward.resolve_model_config") as mock_resolve:
+        with patch("opencode_proxy.forward.get_client", AsyncMock(return_value=mock_client)):
+            with patch("opencode_proxy.forward.resolve_model_config") as mock_resolve:
                 mock_resolve.side_effect = lambda m: (
                     ("north-mini-code-free", "https://api.opencode.ai/zen/v1", "mock-key", "free_coders/simple+classifier")
                     if m == "north-mini-code-free"

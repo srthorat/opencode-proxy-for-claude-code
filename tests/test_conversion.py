@@ -3,8 +3,8 @@ conversion/response.py (_openai_to_anthropic)."""
 
 import json
 
-from conversion.request import _anthropic_to_openai
-from conversion.response import _openai_to_anthropic
+from opencode_proxy.conversion.request import _anthropic_to_openai
+from opencode_proxy.conversion.response import _openai_to_anthropic
 
 # ---------------------------------------------------------------------------
 # _anthropic_to_openai

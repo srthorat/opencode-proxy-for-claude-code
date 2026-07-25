@@ -13,10 +13,10 @@ format:
 	ruff format .
 
 typecheck:
-	mypy *.py conversion/
+	mypy opencode_proxy/
 
 run:
-	uvicorn main:app --reload --host 0.0.0.0 --port 8080
+	uvicorn opencode_proxy.main:app --reload --host 0.0.0.0 --port 8080
 
 docker-up:
 	docker compose up --build -d

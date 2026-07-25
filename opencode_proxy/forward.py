@@ -7,16 +7,16 @@ import httpx
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from auth import check_auth
-from client import get_client
-from config import _ANTHROPIC_COMPAT_MODELS, FREE_AUTO_MODELS, GO_API_KEY, MODEL_MAP, UPSTREAM_API_KEY, UPSTREAM_URL
-from context import RequestContext
-from conversion.request import _anthropic_to_openai
-from conversion.response import _openai_to_anthropic
-from conversion.streaming import _openai_stream_to_anthropic
-from key_pool import pool
-from router import auto_select_model, get_fallbacks, map_claude_model_name, resolve_model_config
-from sanitization import _sanitize_messages, strip_thinking_from_system
+from .auth import check_auth
+from .client import get_client
+from .config import _ANTHROPIC_COMPAT_MODELS, FREE_AUTO_MODELS, GO_API_KEY, MODEL_MAP, UPSTREAM_API_KEY, UPSTREAM_URL
+from .context import RequestContext
+from .conversion.request import _anthropic_to_openai
+from .conversion.response import _openai_to_anthropic
+from .conversion.streaming import _openai_stream_to_anthropic
+from .key_pool import pool
+from .router import auto_select_model, get_fallbacks, map_claude_model_name, resolve_model_config
+from .sanitization import _sanitize_messages, strip_thinking_from_system
 
 logger = logging.getLogger("opencode-proxy")
 
@@ -504,7 +504,7 @@ async def forward_request(request: Request) -> Response:
         send_content=content,
     )
 
-    from observability.stats import record
+    from .observability.stats import record
 
     _t_start = time.monotonic()
 

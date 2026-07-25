@@ -13,7 +13,7 @@ import json
 
 import pytest
 
-from conversion.streaming import _openai_stream_to_anthropic
+from opencode_proxy.conversion.streaming import _openai_stream_to_anthropic
 
 # ---------------------------------------------------------------------------
 # Helpers

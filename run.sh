@@ -34,7 +34,7 @@ fi
 
 if has_cmd headroom; then
   echo "Found Headroom CLI — starting proxy on port $PORT, Headroom on port 8787"
-  nohup uvicorn main:app --host 0.0.0.0 --port "$PORT" >> .run/proxy.log 2>&1 &
+  nohup uvicorn opencode_proxy.main:app --host 0.0.0.0 --port "$PORT" >> .run/proxy.log 2>&1 &
   echo $! > .run/proxy.pid
   echo "Proxy started (pid $(cat .run/proxy.pid))."
   # Headroom forwards all LLM calls to the local proxy
@@ -54,7 +54,7 @@ if has_cmd headroom; then
 fi
 
 echo "Docker Compose not found and Headroom CLI not available. Starting proxy only."
-nohup uvicorn main:app --host 0.0.0.0 --port "$PORT" >> .run/proxy.log 2>&1 &
+nohup uvicorn opencode_proxy.main:app --host 0.0.0.0 --port "$PORT" >> .run/proxy.log 2>&1 &
 echo $! > .run/proxy.pid
 echo "Proxy started (pid $(cat .run/proxy.pid)). To stop, run ./stop.sh"
 echo ""

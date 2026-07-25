@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from config import CODER_MAP_FREE, CODER_MAP_FREE_GLOBAL, CODER_MAP_GO, CODER_MAP_GO_ALL
-from router import _keyword_fallback, auto_select_model, map_claude_model_name, resolve_model_config
+from opencode_proxy.config import CODER_MAP_FREE, CODER_MAP_FREE_GLOBAL, CODER_MAP_GO, CODER_MAP_GO_ALL
+from opencode_proxy.router import _keyword_fallback, auto_select_model, map_claude_model_name, resolve_model_config
 
 # ---------------------------------------------------------------------------
 # _keyword_fallback
@@ -150,7 +150,7 @@ class TestMapClaudeModelName:
 
     def test_model_in_model_map_not_remapped(self, monkeypatch):
         """A claude-* model that IS in MODEL_MAP must not be redirected."""
-        import router as router_module
+        import opencode_proxy.router as router_module
 
         monkeypatch.setattr(
             router_module,
@@ -173,7 +173,7 @@ class TestMapClaudeModelName:
 @pytest.fixture(autouse=True)
 def clear_clf_cache():
     """Clear classifier caches before and after each test to avoid cross-test pollution."""
-    import router
+    import opencode_proxy.router as router
 
     router._clf_cache.clear()
     _keyword_fallback.cache_clear()
@@ -201,7 +201,7 @@ class TestAutoSelectModel:
         mock_client = MagicMock()
         mock_client.post = AsyncMock(return_value=mock_resp)
 
-        with patch("router.get_client", AsyncMock(return_value=mock_client)):
+        with patch("opencode_proxy.router.get_client", AsyncMock(return_value=mock_client)):
             # Use a short generic query so the code fast-precheck doesn't fire
             result = await auto_select_model([{"role": "user", "content": "what is a sorting algorithm"}])
         assert result == CODER_MAP_GO_ALL.get("code:3", CODER_MAP_GO_ALL["code"])
@@ -212,7 +212,7 @@ class TestAutoSelectModel:
         mock_client = MagicMock()
         mock_client.post = AsyncMock(return_value=mock_resp)
 
-        with patch("router.get_client", AsyncMock(return_value=mock_client)):
+        with patch("opencode_proxy.router.get_client", AsyncMock(return_value=mock_client)):
             result = await auto_select_model([{"role": "user", "content": "what is one plus one"}])
         assert result == CODER_MAP_GO_ALL.get("reasoning:3", CODER_MAP_GO_ALL["reasoning"])
 
@@ -222,7 +222,7 @@ class TestAutoSelectModel:
         mock_client = MagicMock()
         mock_client.post = AsyncMock(return_value=mock_resp)
 
-        with patch("router.get_client", AsyncMock(return_value=mock_client)):
+        with patch("opencode_proxy.router.get_client", AsyncMock(return_value=mock_client)):
             result = await auto_select_model([{"role": "user", "content": "hi"}])
         assert result == CODER_MAP_FREE["trivial"]
 
@@ -234,7 +234,7 @@ class TestAutoSelectModel:
         mock_client = MagicMock()
         mock_client.post = AsyncMock(side_effect=Exception("connection refused"))
 
-        with patch("router.get_client", AsyncMock(return_value=mock_client)):
+        with patch("opencode_proxy.router.get_client", AsyncMock(return_value=mock_client)):
             result = await auto_select_model([{"role": "user", "content": "x" * 4001}])
         assert result == CODER_MAP_GO["long"]
 
@@ -244,7 +244,7 @@ class TestAutoSelectModel:
         mock_client = MagicMock()
         mock_client.post = AsyncMock(side_effect=Exception("timeout"))
 
-        with patch("router.get_client", AsyncMock(return_value=mock_client)):
+        with patch("opencode_proxy.router.get_client", AsyncMock(return_value=mock_client)):
             result = await auto_select_model([{"role": "user", "content": "Hello!"}])
         assert result == CODER_MAP_FREE["trivial"]
 
@@ -255,7 +255,7 @@ class TestAutoSelectModel:
         mock_client = MagicMock()
         mock_client.post = AsyncMock(return_value=mock_resp)
 
-        with patch("router.get_client", AsyncMock(return_value=mock_client)):
+        with patch("opencode_proxy.router.get_client", AsyncMock(return_value=mock_client)):
             result = await auto_select_model([{"role": "user", "content": "Hello!"}])
         # Keyword fallback: "Hello!" (6 chars, 1 turn) → free/trivial
         assert result == CODER_MAP_FREE["trivial"]
@@ -268,7 +268,7 @@ class TestAutoSelectModel:
         mock_client = MagicMock()
         mock_client.post = AsyncMock(side_effect=Exception("no network"))
 
-        with patch("router.get_client", AsyncMock(return_value=mock_client)):
+        with patch("opencode_proxy.router.get_client", AsyncMock(return_value=mock_client)):
             result = await auto_select_model(
                 [{"role": "user", "content": "Hello!"}],
                 forced_tier="free",
@@ -281,7 +281,7 @@ class TestAutoSelectModel:
         mock_client = MagicMock()
         mock_client.post = AsyncMock(side_effect=Exception("no network"))
 
-        with patch("router.get_client", AsyncMock(return_value=mock_client)):
+        with patch("opencode_proxy.router.get_client", AsyncMock(return_value=mock_client)):
             result = await auto_select_model(
                 [{"role": "user", "content": "Hello!"}],
                 forced_tier="go",
@@ -294,7 +294,7 @@ class TestAutoSelectModel:
         mock_client = MagicMock()
         mock_client.post = AsyncMock(side_effect=Exception("no network"))
 
-        with patch("router.get_client", AsyncMock(return_value=mock_client)):
+        with patch("opencode_proxy.router.get_client", AsyncMock(return_value=mock_client)):
             result = await auto_select_model(
                 [{"role": "user", "content": "Hello!"}],
                 forced_tier="go-all",
@@ -308,7 +308,7 @@ class TestAutoSelectModel:
         mock_client = MagicMock()
         mock_client.post = AsyncMock(return_value=mock_resp)
 
-        with patch("router.get_client", AsyncMock(return_value=mock_client)):
+        with patch("opencode_proxy.router.get_client", AsyncMock(return_value=mock_client)):
             result = await auto_select_model(
                 [{"role": "user", "content": "what is sorting"}],
                 forced_tier="free",
@@ -398,7 +398,7 @@ class TestAutoSelectModel:
         # With has_tools=True but only 1 tool block, falls through to LLM/keyword
         mock_client = MagicMock()
         mock_client.post = AsyncMock(side_effect=Exception("no network"))
-        with patch("router.get_client", AsyncMock(return_value=mock_client)):
+        with patch("opencode_proxy.router.get_client", AsyncMock(return_value=mock_client)):
             result = await auto_select_model(messages, has_tools=True)
         # Result should be from CODER_MAP_GO (keyword fallback for 1-turn message)
         assert result in CODER_MAP_GO.values() or result in CODER_MAP_FREE.values()
@@ -415,7 +415,7 @@ class TestAutoSelectModel:
         text = "what is one plus one"
         msg = [{"role": "user", "content": text}]
 
-        with patch("router.get_client", AsyncMock(return_value=mock_client)):
+        with patch("opencode_proxy.router.get_client", AsyncMock(return_value=mock_client)):
             await auto_select_model(msg)
             await auto_select_model(msg)
 

@@ -2,7 +2,7 @@ import json
 import logging
 import uuid
 
-from conversion import STOP_REASON_MAP
+from . import STOP_REASON_MAP
 
 logger = logging.getLogger("opencode-proxy")
 

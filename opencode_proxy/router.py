@@ -4,8 +4,8 @@ import logging
 import os
 from functools import lru_cache
 
-from client import get_client
-from config import (
+from .client import get_client
+from .config import (
     CODER_MAP_FREE,
     CODER_MAP_FREE_GLOBAL,
     CODER_MAP_GO,

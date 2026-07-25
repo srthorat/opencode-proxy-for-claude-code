@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from forward import _build_target_url, _forward_to_upstream
-from key_pool import KeyPool
+from opencode_proxy.forward import _build_target_url, _forward_to_upstream
+from opencode_proxy.key_pool import KeyPool
 from tests.test_forward import make_ctx
 
 
@@ -116,8 +116,8 @@ class TestForwardKeyRotation:
         mock_client.build_request.return_value = MagicMock()
         mock_client.send = AsyncMock(side_effect=[mock_resp_401, mock_resp_500, mock_resp_200])
 
-        with patch("forward.get_client", AsyncMock(return_value=mock_client)):
-            with patch("forward.pool", kp):
+        with patch("opencode_proxy.forward.get_client", AsyncMock(return_value=mock_client)):
+            with patch("opencode_proxy.forward.pool", kp):
                 _build_target_url(ctx)
                 resp = await _forward_to_upstream(ctx)
 

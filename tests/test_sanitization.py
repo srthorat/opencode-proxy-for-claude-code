@@ -1,6 +1,6 @@
 """Tests for sanitization.py — _sanitize_messages and _strip_thinking."""
 
-from sanitization import _sanitize_messages, _strip_thinking
+from opencode_proxy.sanitization import _sanitize_messages, _strip_thinking
 
 # ---------------------------------------------------------------------------
 # _strip_thinking
