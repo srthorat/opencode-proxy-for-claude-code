@@ -13,6 +13,8 @@ services:
       headroom:
         condition: service_healthy
         required: false # Headroom is opt-in; proxy starts without it
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
   # Headroom compression proxy — public entry point on port 8787.
