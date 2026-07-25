@@ -466,8 +466,8 @@ class TestResolveModelConfig:
 
     def test_resolve_local_ollama_model(self):
         # Explicit model in models.json
-        upstream, url, key, role = resolve_model_config("qwen2.5-coder:7b")
-        assert upstream == "qwen2.5-coder:7b"
+        upstream, url, key, role = resolve_model_config("qwen2.5-coder:32b")
+        assert upstream == "qwen2.5-coder:32b"
         from opencode_proxy.config import OLLAMA_LOCAL_URL, is_anthropic_compat
         assert url == OLLAMA_LOCAL_URL
         assert key == "ollama"
