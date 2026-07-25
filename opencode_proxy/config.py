@@ -161,8 +161,8 @@ CODER_MAP_GO_ALL: dict[str, str] = {
 _ANTHROPIC_COMPAT_MODELS = {
     "minimax-m3:cloud",
     "kimi-k2.7-code:cloud",
-    "qwen2.5-coder:32b",
-    "qwen2.5-coder:14b",
+    "qwen2.5-coder:7b",
+    "qwen2.5-coder:3b",
 }
 
 

@@ -5,6 +5,6 @@
   "mimo-v2.5-free":                {"url": "env:OPENCODE_FREE_URL", "api_key": "env:OPENCODE_API_KEY", "role": "free_coders/general",             "fallbacks": ["north-mini-code-free"]},
   "minimax-m3:cloud":              {"url": "env:OLLAMA_MINIMAX_URL", "api_key": "env:OLLAMA_API_KEY", "role": "free_coders/general"},
   "kimi-k2.7-code:cloud":          {"url": "env:OLLAMA_MINIMAX_URL", "api_key": "env:OLLAMA_API_KEY", "role": "free_coders/general"},
-  "qwen2.5-coder:32b":             {"url": "env:OLLAMA_LOCAL_URL", "api_key": "ollama", "role": "free_coders/general"},
-  "qwen2.5-coder:14b":             {"url": "env:OLLAMA_LOCAL_URL", "api_key": "ollama", "role": "free_coders/general"}
+  "qwen2.5-coder:7b":              {"url": "env:OLLAMA_LOCAL_URL", "api_key": "ollama", "role": "free_coders/general"},
+  "qwen2.5-coder:3b":              {"url": "env:OLLAMA_LOCAL_URL", "api_key": "ollama", "role": "free_coders/general"}
 }
