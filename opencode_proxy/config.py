@@ -15,7 +15,7 @@ logger = logging.getLogger("opencode-proxy")
 UPSTREAM_URL: str = os.getenv("UPSTREAM_URL", "https://api.opencode.ai").rstrip("/")
 UPSTREAM_API_KEY: str | None = os.getenv("OPENCODE_API_KEY")
 OPENCODE_FREE_URL: str = os.getenv("OPENCODE_FREE_URL", "").rstrip("/")
-OLLAMA_URL: str = os.getenv("OLLAMA_URL", "http://ollama:11434").rstrip("/")
+OLLAMA_URL: str = os.getenv("OLLAMA_URL", "http://ollama-minimax:11434").rstrip("/")
 PORT: int = int(os.getenv("PORT", "8080"))
 # Optional inbound auth — if set, every request must carry "Authorization: Bearer <key>"
 PROXY_API_KEY: str | None = os.getenv("PROXY_API_KEY")

@@ -245,7 +245,7 @@ def resolve_model_config(name: str):
         if isinstance(url_val, str) and url_val:
             if url_val.startswith("env:"):
                 envname = url_val.split("env:", 1)[1]
-                if envname == "OLLAMA_URL":
+                if envname in ("OLLAMA_URL", "OLLAMA_MINIMAX_URL"):
                     upstream_url = os.getenv(envname, OLLAMA_URL)
                 else:
                     upstream_url = os.getenv(envname, UPSTREAM_URL)

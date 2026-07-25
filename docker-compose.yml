@@ -60,14 +60,14 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-  # Local Ollama service — runs containerized inside the same Docker network.
-  # Models downloaded will be persisted in the 'ollama-data' volume.
-  ollama:
+  # Local Ollama service for Minimax — runs containerized inside the same Docker network.
+  # Models downloaded will be persisted in the 'ollama-minimax-data' volume.
+  ollama-minimax:
     image: ollama/ollama:latest
     ports:
       - "11434:11434"
     volumes:
-      - ollama-data:/root/.ollama
+      - ollama-minimax-data:/root/.ollama
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 10s
@@ -77,4 +77,4 @@ services:
 
 volumes:
   headroom-data:
-  ollama-data:
+  ollama-minimax-data:
