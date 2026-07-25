@@ -13,6 +13,7 @@ from .config import (
     DIRECT_KEY,
     DIRECT_URL,
     MODEL_MAP,
+    OLLAMA_URL,
     UPSTREAM_API_KEY,
     UPSTREAM_URL,
 )
@@ -244,7 +245,10 @@ def resolve_model_config(name: str):
         if isinstance(url_val, str) and url_val:
             if url_val.startswith("env:"):
                 envname = url_val.split("env:", 1)[1]
-                upstream_url = os.getenv(envname, UPSTREAM_URL)
+                if envname == "OLLAMA_URL":
+                    upstream_url = os.getenv(envname, OLLAMA_URL)
+                else:
+                    upstream_url = os.getenv(envname, UPSTREAM_URL)
             elif url_val == "OPENCODE_URL":
                 upstream_url = UPSTREAM_URL
             elif not _is_safe_url(url_val):

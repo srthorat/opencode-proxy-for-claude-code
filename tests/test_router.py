@@ -448,3 +448,11 @@ class TestResolveModelConfig:
         # Resolve a non-existent model with/without prefix should strip prefix in resolved model
         upstream, url, key, role = resolve_model_config("opencode-go/non-existent-model")
         assert upstream == "non-existent-model"
+
+    def test_resolve_ollama_model(self):
+        upstream, url, key, role = resolve_model_config("minimax-m3:cloud")
+        assert upstream == "minimax-m3:cloud"
+        from opencode_proxy.config import OLLAMA_URL
+        assert url == OLLAMA_URL
+        assert key == "ollama"
+        assert role == "free_coders/general"
