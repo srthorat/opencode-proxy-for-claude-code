@@ -141,13 +141,6 @@ CODER_MAP_GO_ALL: dict[str, str] = {
 }
 
 
-# ---------------------------------------------------------------------------
-# Protocol detection
-# ---------------------------------------------------------------------------
 # Models that accept Anthropic /v1/messages format directly.
-_ANTHROPIC_COMPAT_MODELS = {
-    "minimax-m3",
-    "qwen3.7-plus",
-    "opencode-go/minimax-m3",
-    "opencode-go/qwen3.7-plus",
-}
+_ANTHROPIC_COMPAT_MODELS = set()
+
