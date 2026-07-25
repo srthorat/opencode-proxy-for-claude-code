@@ -14,7 +14,7 @@ from .context import RequestContext
 from .conversion.request import _anthropic_to_openai
 from .conversion.response import _openai_to_anthropic
 from .conversion.streaming import _openai_stream_to_anthropic
-from .key_pool import pool
+from .key_pool import ollama_pool, pool
 from .router import auto_select_model, get_fallbacks, map_claude_model_name, resolve_model_config
 from .sanitization import _sanitize_messages, strip_thinking_from_system
 
@@ -268,11 +268,15 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
 
             _build_target_url(ctx)
 
-        # ── Key selection: use pool for free-auto models ───────────────────────
-        # For all other models the key from resolve_model_config is used as-is.
         _active_key = key
+        _active_pool = None
         if model in FREE_AUTO_MODELS and pool.has_keys():
-            _pooled = pool.get_key(model)
+            _active_pool = pool
+        elif model in _ANTHROPIC_COMPAT_MODELS and ollama_pool.has_keys():
+            _active_pool = ollama_pool
+
+        if _active_pool:
+            _pooled = _active_pool.get_key(model)
             if _pooled:
                 _active_key = _pooled
             else:
@@ -334,17 +338,17 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
                 _req_failed = True
                 break  # exit key loop; outer loop handles continuation
 
-            # ── Key rotation on any error response (free-auto models only) ───────
-            if upstream_resp.status_code >= 400 and model in FREE_AUTO_MODELS and pool.has_keys():
-                pool.demote(_active_key, model)
-                _next_key = pool.get_key(model)
+            # ── Key rotation on any error response (free-auto or ollama models) ──
+            if upstream_resp.status_code >= 400 and _active_pool:
+                _active_pool.demote(_active_key, model)
+                _next_key = _active_pool.get_key(model)
                 if _next_key and _next_key != _active_key:
                     logger.warning(
                         "key-pool: key[%d] got %d for %s — rotating to key[%d]",
-                        pool._key_index(_active_key),
+                        _active_pool._key_index(_active_key),
                         upstream_resp.status_code,
                         model,
-                        pool._key_index(_next_key),
+                        _active_pool._key_index(_next_key),
                     )
                     await upstream_resp.aclose()
                     _active_key = _next_key

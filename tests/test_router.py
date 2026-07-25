@@ -453,9 +453,9 @@ class TestResolveModelConfig:
         # Default behavior
         upstream, url, key, role = resolve_model_config("minimax-m3:cloud")
         assert upstream == "minimax-m3:cloud"
-        from opencode_proxy.config import OLLAMA_URL
+        from opencode_proxy.config import OLLAMA_API_KEY, OLLAMA_URL
         assert url == OLLAMA_URL
-        assert key == "ollama"
+        assert key == OLLAMA_API_KEY
         assert role == "free_coders/general"
 
         # Behavior with environment variables set

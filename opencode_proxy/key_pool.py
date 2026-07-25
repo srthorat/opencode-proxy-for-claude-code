@@ -25,7 +25,14 @@ import logging
 
 import httpx
 
-from .config import FREE_AUTO_MODELS, OPENCODE_FREE_URL, UPSTREAM_API_KEYS
+from .config import (
+    _ANTHROPIC_COMPAT_MODELS,
+    FREE_AUTO_MODELS,
+    OLLAMA_API_KEYS,
+    OLLAMA_URL,
+    OPENCODE_FREE_URL,
+    UPSTREAM_API_KEYS,
+)
 
 logger = logging.getLogger("opencode-proxy")
 
@@ -43,9 +50,10 @@ class KeyPool:
       absent  -> unknown  (probe inconclusive; treated as healthy for routing)
     """
 
-    def __init__(self, keys: list[str], free_url: str) -> None:
+    def __init__(self, keys: list[str], free_url: str, models: set[str] | frozenset[str]) -> None:
         self._keys: list[str] = keys
         self._free_url: str = free_url.rstrip("/")
+        self._models: set[str] | frozenset[str] = models
         self._health: dict[tuple[str, str], bool] = {}
         self._lock = asyncio.Lock()
 
@@ -90,7 +98,7 @@ class KeyPool:
         Raw key values are NEVER included -- only their 1-based indices.
         """
         snap: dict[str, dict[str, str]] = {}
-        for model in sorted(FREE_AUTO_MODELS):
+        for model in sorted(self._models):
             snap[model] = {}
             for i, key in enumerate(self._keys, 1):
                 state = self._health.get((key, model))
@@ -116,7 +124,7 @@ class KeyPool:
             logger.warning("key-pool: OPENCODE_FREE_URL not set -- skipping probe")
             return
 
-        models = sorted(FREE_AUTO_MODELS)
+        models = sorted(self._models)
         total = len(self._keys) * len(models)
         logger.info(
             "key-pool: probing %d keys x %d models (%d probes)...",
@@ -247,4 +255,5 @@ class KeyPool:
 # Module-level singleton
 # ---------------------------------------------------------------------------
 
-pool = KeyPool(keys=UPSTREAM_API_KEYS, free_url=OPENCODE_FREE_URL)
+pool = KeyPool(keys=UPSTREAM_API_KEYS, free_url=OPENCODE_FREE_URL, models=FREE_AUTO_MODELS)
+ollama_pool = KeyPool(keys=OLLAMA_API_KEYS, free_url=OLLAMA_URL, models=_ANTHROPIC_COMPAT_MODELS)

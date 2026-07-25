@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
+from opencode_proxy.config import FREE_AUTO_MODELS, OLLAMA_URL
 from opencode_proxy.forward import _build_target_url, _forward_to_upstream
 from opencode_proxy.key_pool import KeyPool
 from tests.test_forward import make_ctx
@@ -13,7 +14,7 @@ class TestKeyPoolUnit:
     async def test_get_key_order_and_fallback(self):
         # Create pool with 3 mock keys
         keys = ["keyA", "keyB", "keyC"]
-        kp = KeyPool(keys=keys, free_url="https://api.example.com")
+        kp = KeyPool(keys=keys, free_url="https://api.example.com", models=FREE_AUTO_MODELS)
 
         # Initially, all are healthy/unknown, so get_key returns first key
         assert kp.get_key("mimo-v2.5-free") == "keyA"
@@ -37,7 +38,7 @@ class TestKeyPoolUnit:
     @pytest.mark.asyncio
     async def test_health_snapshot(self):
         keys = ["keyA", "keyB"]
-        kp = KeyPool(keys=keys, free_url="https://api.example.com")
+        kp = KeyPool(keys=keys, free_url="https://api.example.com", models=FREE_AUTO_MODELS)
         kp.demote("keyA", "mimo-v2.5-free")
         kp.promote("keyB", "mimo-v2.5-free")
 
@@ -50,7 +51,7 @@ class TestKeyPoolUnit:
     @pytest.mark.asyncio
     async def test_probe_all(self):
         keys = ["keyA", "keyB"]
-        kp = KeyPool(keys=keys, free_url="https://api.example.com")
+        kp = KeyPool(keys=keys, free_url="https://api.example.com", models=FREE_AUTO_MODELS)
 
         # We mock calls to post. For keyA all models succeed. For keyB we return 401.
         async def mock_post(url, **kwargs):
@@ -82,7 +83,7 @@ class TestForwardKeyRotation:
     async def test_key_rotation_on_4xx_and_5xx(self):
         # Create a KeyPool with 3 keys
         keys = ["keyA", "keyB", "keyC"]
-        kp = KeyPool(keys=keys, free_url="https://api.opencode.ai")
+        kp = KeyPool(keys=keys, free_url="https://api.opencode.ai", models=FREE_AUTO_MODELS)
 
         ctx = make_ctx(
             method="POST",

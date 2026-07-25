@@ -42,6 +42,19 @@ UPSTREAM_API_KEYS: list[str] = [
     if k
 ]
 
+# Ordered list of Ollama API keys for key rotation.
+# Add more keys by appending OLLAMA_API_KEY_2 … _4 in .env.
+OLLAMA_API_KEYS: list[str] = [
+    k
+    for k in [
+        OLLAMA_API_KEY,
+        os.getenv("OLLAMA_API_KEY_2"),
+        os.getenv("OLLAMA_API_KEY_3"),
+        os.getenv("OLLAMA_API_KEY_4"),
+    ]
+    if k
+]
+
 # The four free-auto models that participate in key-pool rotation.
 FREE_AUTO_MODELS: frozenset[str] = frozenset(
     {
