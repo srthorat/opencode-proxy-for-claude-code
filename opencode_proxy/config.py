@@ -159,5 +159,6 @@ CODER_MAP_GO_ALL: dict[str, str] = {
 # Models that accept Anthropic /v1/messages format directly.
 _ANTHROPIC_COMPAT_MODELS = {
     "minimax-m3:cloud",
+    "kimi-k2.7-code:cloud",
 }
 
