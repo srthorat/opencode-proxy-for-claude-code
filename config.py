@@ -90,13 +90,13 @@ CODER_MAP_FREE: dict[str, str] = {
 # No OpenCode go-subscription, no direct ZAI, no OpenRouter gpt-oss (rate-limited).
 # For GLM via OpenCode subscription, use the go tier (opencode-go/glm-5.2).
 CODER_MAP_FREE_GLOBAL: dict[str, str] = {
-    "tier1": "cohere/north-mini-code-free",  # core free global tier (OpenRouter, 256K)
-    "code": "cohere/north-mini-code-free",  # code + reasoning
-    "creative": "google/gemma-4-31b-it",  # creative tasks (gpt-oss dropped: rate-limited)
-    "image+reasoning": "google/gemma-4-31b-it",  # image understanding + reasoning
-    "general": "cohere/north-mini-code-free",  # general default
-    "long": "cohere/north-mini-code-free",  # 256K context for long text
-    "reasoning": "google/gemma-4-31b-it",  # reasoning-capable, free
+    "tier1": "free-global/cohere/north-mini-code-free",  # core free global tier (OpenRouter, 256K)
+    "code": "free-global/cohere/north-mini-code-free",  # code + reasoning
+    "creative": "free-global/google/gemma-4-31b-it",  # creative tasks (gpt-oss dropped: rate-limited)
+    "image+reasoning": "free-global/google/gemma-4-31b-it",  # image understanding + reasoning
+    "general": "free-global/cohere/north-mini-code-free",  # general default
+    "long": "free-global/cohere/north-mini-code-free",  # 256K context for long text
+    "reasoning": "free-global/google/gemma-4-31b-it",  # reasoning-capable, free
 }
 
 # Go paid tier (zen/go/v1) — best-in-class per category.
@@ -112,41 +112,41 @@ CODER_MAP_GO: dict[str, str] = {
     "long": "opencode-go/minimax-m3",  # large context, documents, summarization
     "creative": "opencode-go/qwen3.7-plus",  # writing, creative, translation
     "agent": "opencode-go/mimo-v2.5-pro",  # multi-step agentic, tool-use, planning
-    "general": "opencode-go/qwen3.7-max",  # everything else — high quality default
-    "fast": "opencode-go/deepseek-v4-flash",  # quick go-tier tasks
+    "general": "opencode-go/grok-4.5",  # everything else — flagship general default
+    "fast": "opencode-go/kimi-k3",  # quick go-tier tasks
 }
 
-# Go-all tier includes all 15 models, with level-based routing (Level 4 = flagship)
+# Go-all tier includes all remaining models
 CODER_MAP_GO_ALL: dict[str, str] = {
-    # Level-based category mappings to cover all 15 models
+    # Level-based category mappings to cover remaining models
     "code:4": "opencode-go/kimi-k3",
-    "code:3": "opencode-go/kimi-k2.7-code",
-    "code:2": "opencode-go/kimi-k2.6",
+    "code:3": "opencode-go/kimi-k3",
+    "code:2": "opencode-go/kimi-k3",
     "reasoning:4": "opencode-go/grok-4.5",
-    "reasoning:3": "opencode-go/deepseek-v4-pro",
-    "reasoning:2": "opencode-go/deepseek-v4-flash",
+    "reasoning:3": "opencode-go/grok-4.5",
+    "reasoning:2": "opencode-go/grok-4.5",
     "long:3": "opencode-go/minimax-m3",
-    "long:2": "opencode-go/minimax-m2.7",
-    "long:1": "opencode-go/minimax-m2.5",
-    "long:0": "opencode-go/glm-5.2",
+    "long:2": "opencode-go/minimax-m3",
+    "long:1": "opencode-go/minimax-m3",
+    "long:0": "opencode-go/minimax-m3",
     "creative:3": "opencode-go/qwen3.7-plus",
-    "creative:2": "opencode-go/qwen3.6-plus",
+    "creative:2": "opencode-go/qwen3.7-plus",
     "agent:3": "opencode-go/mimo-v2.5-pro",
-    "agent:2": "opencode-go/mimo-v2.5",
+    "agent:2": "opencode-go/mimo-v2.5-pro",
     "general:4": "opencode-go/grok-4.5",
-    "general:3": "opencode-go/qwen3.7-max",
-    "general:2": "opencode-go/glm-5.2",
-    "general:1": "opencode-go/glm-5.1",
-    "fast:3": "opencode-go/deepseek-v4-flash",
-    "fast:2": "opencode-go/glm-5.1",
+    "general:3": "opencode-go/grok-4.5",
+    "general:2": "opencode-go/grok-4.5",
+    "general:1": "opencode-go/grok-4.5",
+    "fast:3": "opencode-go/kimi-k3",
+    "fast:2": "opencode-go/kimi-k3",
     # Category fallbacks (for compatibility or keyword fallbacks)
     "code": "opencode-go/kimi-k3",
     "reasoning": "opencode-go/grok-4.5",
     "long": "opencode-go/minimax-m3",
     "creative": "opencode-go/qwen3.7-plus",
     "agent": "opencode-go/mimo-v2.5-pro",
-    "general": "opencode-go/qwen3.7-max",
-    "fast": "opencode-go/deepseek-v4-flash",
+    "general": "opencode-go/grok-4.5",
+    "fast": "opencode-go/kimi-k3",
 }
 
 
@@ -156,15 +156,7 @@ CODER_MAP_GO_ALL: dict[str, str] = {
 # Models that accept Anthropic /v1/messages format directly.
 _ANTHROPIC_COMPAT_MODELS = {
     "minimax-m3",
-    "minimax-m2.7",
-    "minimax-m2.5",
-    "qwen3.7-max",
     "qwen3.7-plus",
-    "qwen3.6-plus",
     "opencode-go/minimax-m3",
-    "opencode-go/minimax-m2.7",
-    "opencode-go/minimax-m2.5",
-    "opencode-go/qwen3.7-max",
     "opencode-go/qwen3.7-plus",
-    "opencode-go/qwen3.6-plus",
 }

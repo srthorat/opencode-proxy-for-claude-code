@@ -139,7 +139,7 @@ class TestMapClaudeModelName:
 
     def test_non_claude_model_unchanged(self):
         assert map_claude_model_name("gpt-4") == "gpt-4"
-        assert map_claude_model_name("kimi-k2.7") == "kimi-k2.7"
+        assert map_claude_model_name("kimi-k3") == "kimi-k3"
 
     def test_already_routing_token_unchanged(self):
         assert map_claude_model_name("go-auto") == "go-auto"
@@ -431,13 +431,13 @@ class TestAutoSelectModel:
 class TestResolveModelConfig:
     def test_resolve_with_opencode_go_prefix_directly(self):
         # Resolve a model with the prefix explicitly configured
-        upstream, url, key, role = resolve_model_config("opencode-go/kimi-k2.7-code")
-        assert upstream == "kimi-k2.7-code"
+        upstream, url, key, role = resolve_model_config("opencode-go/kimi-k3")
+        assert upstream == "kimi-k3"
 
     def test_resolve_without_opencode_go_prefix_fallback(self):
         # Resolve a model without the prefix when the key in models.json is prefixed
-        upstream, url, key, role = resolve_model_config("kimi-k2.7-code")
-        assert upstream == "kimi-k2.7-code"
+        upstream, url, key, role = resolve_model_config("kimi-k3")
+        assert upstream == "kimi-k3"
 
     def test_resolve_with_opencode_go_prefix_fallback_for_non_prefixed_config(self):
         # Resolve a model with the prefix when the key in models.json is NOT prefixed

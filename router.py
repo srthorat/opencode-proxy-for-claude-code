@@ -201,13 +201,18 @@ def resolve_model_config(name: str):
     if entry is None:
         if key.startswith("opencode-go/"):
             alt_key = key[len("opencode-go/") :]
+            entry = MODEL_MAP.get(alt_key)
+        elif key.startswith("free-global/"):
+            alt_key = key[len("free-global/") :]
+            entry = MODEL_MAP.get(alt_key)
         else:
-            alt_key = f"opencode-go/{key}"
-        entry = MODEL_MAP.get(alt_key)
+            entry = MODEL_MAP.get(f"opencode-go/{key}") or MODEL_MAP.get(f"free-global/{key}")
 
     upstream_model = key.replace(" ", "-")
     if upstream_model.startswith("opencode-go/"):
         upstream_model = upstream_model[len("opencode-go/") :]
+    elif upstream_model.startswith("free-global/"):
+        upstream_model = upstream_model[len("free-global/") :]
 
     upstream_url = UPSTREAM_URL
     upstream_api_key = UPSTREAM_API_KEY
@@ -358,7 +363,7 @@ async def auto_select_model(
             chosen = CODER_MAP_GO_ALL["code"]
             logger.info("auto-router[precheck]: tier=go-all category=code → %s", chosen)
             return chosen
-        logger.info("auto-router[precheck]: tier=go category=code → kimi-k2.7-code")
+        logger.info("auto-router[precheck]: tier=go category=code → %s", CODER_MAP_GO["code"])
         return CODER_MAP_GO["code"]
 
     # ── Stage 1: LLM classification via north-mini-code-free ────────────────

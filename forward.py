@@ -91,6 +91,7 @@ async def _sanitize_and_route(ctx: RequestContext) -> None:
                     "go-all",
                     "go-all-auto",
                 ):
+                    ctx.is_auto_routed = True
                     messages = payload.get("messages", [])
                     _forced_tier = {
                         "free": "free",
@@ -107,12 +108,13 @@ async def _sanitize_and_route(ctx: RequestContext) -> None:
                     incoming_model = await auto_select_model(messages, forced_tier=_forced_tier, has_tools=_has_tools)
                     payload["model"] = incoming_model
 
-            # Normalize incoming model key to match keys in MODEL_MAP (e.g. gemma-4-31b-it -> google/gemma-4-31b-it)
+            # Normalize incoming model key to match keys in MODEL_MAP (e.g. gemma-4-31b-it -> free-global/google/gemma-4-31b-it)
             if not _model_lower.startswith("direct:") and incoming_model not in MODEL_MAP:
-                if f"google/{incoming_model}" in MODEL_MAP:
-                    incoming_model = f"google/{incoming_model}"
-                elif f"opencode-go/{incoming_model}" in MODEL_MAP:
-                    incoming_model = f"opencode-go/{incoming_model}"
+                for prefix in ("google/", "opencode-go/", "free-global/", "free-global/google/", "free-global/cohere/"):
+                    candidate = f"{prefix}{incoming_model}"
+                    if candidate in MODEL_MAP:
+                        incoming_model = candidate
+                        break
 
             upstream_model, upstream_url, upstream_api_key, role = resolve_model_config(incoming_model)
             ctx.is_direct = role == "direct"
@@ -264,7 +266,7 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
         )
     ]
     lookup_key = ctx.config_model_key or ctx.resolved_model
-    if lookup_key:
+    if lookup_key and ctx.is_auto_routed:
         for fb in get_fallbacks(lookup_key):
             fb_model, fb_url, fb_key, _ = resolve_model_config(fb)
             fb_need_conv = ctx.path == "/v1/messages" and _is_openai_compat(fb_model) and not ctx.is_direct
@@ -405,10 +407,18 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
         # Retryable upstream error — try next fallback if available
         is_retryable = upstream_resp.status_code in _RETRYABLE_STATUS
         err_snippet = ""
-        if not is_retryable and upstream_resp.status_code in (400, 401, 403, 404) and attempt < len(candidates) - 1:
+        if not is_retryable and upstream_resp.status_code in (400, 401, 402, 403, 404) and attempt < len(candidates) - 1:
             try:
                 body_bytes = await upstream_resp.aread()
-                if b"ModelError" in body_bytes or b"not supported" in body_bytes or b"not found" in body_bytes:
+                if (
+                    b"ModelError" in body_bytes
+                    or b"not supported" in body_bytes
+                    or b"not found" in body_bytes
+                    or b"CreditsError" in body_bytes
+                    or b"GoUsageLimitError" in body_bytes
+                    or b"payment method" in body_bytes
+                    or b"billing" in body_bytes
+                ):
                     is_retryable = True
                     err_snippet = body_bytes.decode("utf-8", errors="replace")[:200]
             except Exception:

@@ -23,6 +23,7 @@ class RequestContext:
     config_model_key: str | None = None
     is_direct: bool = False
     is_google: bool = False
+    is_auto_routed: bool = False
 
     # Set after routing: body that will actually be sent to the upstream
     send_content: bytes | None = None

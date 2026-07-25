@@ -167,14 +167,15 @@ class TestBuildTargetUrl:
 class TestFallbackRouting:
     @pytest.mark.asyncio
     async def test_fallback_routing_uses_config_key(self):
-        # Prepare a mock context with a model key that has fallbacks (e.g., google/gemma-4-31b-it)
+        # Prepare a mock context with a model key that has fallbacks (e.g., free-global/google/gemma-4-31b-it)
         ctx = make_ctx(
             method="POST",
             path="/v1/messages",
             resolved_model="gemma-4-31b-it",
-            config_model_key="google/gemma-4-31b-it",
+            config_model_key="free-global/google/gemma-4-31b-it",
             per_request_upstream_url="https://generativelanguage.googleapis.com",
             need_protocol_conv=True,
+            is_auto_routed=True,
         )
 
         # We need mock responses: 429 for the first model, 200 for the fallback model (big-pickle)
@@ -215,4 +216,53 @@ class TestFallbackRouting:
         # Assert that it successfully retried and got 200 from the fallback
         assert resp.status_code == 200
         # Assert that the client was called twice
+        assert mock_client.send.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_fallback_routing_on_credits_error(self):
+        # Prepare a mock context with a model key that has fallbacks (e.g., free-global/google/gemma-4-31b-it)
+        ctx = make_ctx(
+            method="POST",
+            path="/v1/messages",
+            resolved_model="gemma-4-31b-it",
+            config_model_key="free-global/google/gemma-4-31b-it",
+            per_request_upstream_url="https://generativelanguage.googleapis.com",
+            need_protocol_conv=True,
+            is_auto_routed=True,
+        )
+
+        # We need mock responses: 401 CreditsError for the first model, 200 for the fallback model (big-pickle)
+        mock_resp_401 = MagicMock()
+        mock_resp_401.status_code = 401
+        mock_resp_401.headers = {"content-type": "application/json"}
+        mock_resp_401.aread = AsyncMock(return_value=b'{"type":"error","error":{"type":"CreditsError","message":"No payment method."}}')
+        mock_resp_401.aclose = AsyncMock()
+
+        mock_resp_200 = MagicMock()
+        mock_resp_200.status_code = 200
+        mock_resp_200.headers = {"content-type": "application/json"}
+        mock_resp_200.aread = AsyncMock(return_value=b'{"choices": [{"message": {"content": "ok"}}]}')
+        mock_resp_200.aclose = AsyncMock()
+
+        mock_client = MagicMock()
+        mock_client.build_request.return_value = MagicMock()
+        mock_client.send = AsyncMock(side_effect=[mock_resp_401, mock_resp_200])
+
+        with patch("forward.get_client", AsyncMock(return_value=mock_client)):
+            with patch("forward.resolve_model_config") as mock_resolve:
+                mock_resolve.side_effect = lambda m: (
+                    ("big-pickle", "https://opencode.ai/zen/v1", "mock-key", None)
+                    if m == "big-pickle"
+                    else (
+                        "gemma-4-31b-it",
+                        "https://generativelanguage.googleapis.com",
+                        "mock-key",
+                        "free_coders/image+reasoning",
+                    )
+                )
+
+                _build_target_url(ctx)
+                resp = await _forward_to_upstream(ctx)
+
+        assert resp.status_code == 200
         assert mock_client.send.call_count == 2

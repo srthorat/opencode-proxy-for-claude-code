@@ -277,7 +277,7 @@ class TestProxyRoute:
             resp = client.post(
                 "/v1/messages",
                 json={
-                    "model": "kimi-k2.7",  # OpenAI-compat model → triggers protocol conv
+                    "model": "kimi-k3",  # OpenAI-compat model → triggers protocol conv
                     "messages": [{"role": "user", "content": "Hello"}],
                 },
             )
@@ -297,7 +297,7 @@ class TestProxyRoute:
             resp = client.post(
                 "/v1/messages",
                 json={
-                    "model": "kimi-k2.7",
+                    "model": "kimi-k3",
                     "messages": [{"role": "user", "content": "Hello"}],
                 },
             )
@@ -322,7 +322,7 @@ class TestProxyRoute:
             resp = client.post(
                 "/v1/messages",
                 json={
-                    "model": "kimi-k2.7",
+                    "model": "kimi-k3",
                     "messages": [{"role": "user", "content": "Hello"}],
                 },
             )
