@@ -15,6 +15,7 @@ logger = logging.getLogger("opencode-proxy")
 UPSTREAM_URL: str = os.getenv("UPSTREAM_URL", "https://api.opencode.ai").rstrip("/")
 UPSTREAM_API_KEY: str | None = os.getenv("OPENCODE_API_KEY")
 OPENCODE_FREE_URL: str = os.getenv("OPENCODE_FREE_URL", "").rstrip("/")
+OLLAMA_LOCAL_URL: str = os.getenv("OLLAMA_LOCAL_URL", "http://host.docker.internal:11434").rstrip("/")
 OLLAMA_URL: str = os.getenv("OLLAMA_URL", "https://ollama.com").rstrip("/")
 OLLAMA_API_KEY: str = os.getenv("OLLAMA_API_KEY", "ollama")
 PORT: int = int(os.getenv("PORT", "8080"))
@@ -160,5 +161,20 @@ CODER_MAP_GO_ALL: dict[str, str] = {
 _ANTHROPIC_COMPAT_MODELS = {
     "minimax-m3:cloud",
     "kimi-k2.7-code:cloud",
+    "qwen2.5-coder:32b",
+    "qwen2.5-coder:14b",
 }
+
+
+def is_anthropic_compat(model_name: str, target_url: str = "") -> bool:
+    """Return True if model speaks native Anthropic Messages format (no OpenAI conversion needed)."""
+    if not model_name:
+        return False
+    if model_name in _ANTHROPIC_COMPAT_MODELS:
+        return True
+    if ":" in model_name or model_name.endswith(":cloud"):
+        return True
+    if "11434" in target_url or "ollama" in target_url:
+        return True
+    return False
 

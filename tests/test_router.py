@@ -458,9 +458,23 @@ class TestResolveModelConfig:
         assert key == OLLAMA_API_KEY
         assert role == "free_coders/general"
 
-        # Behavior with environment variables set
         monkeypatch.setenv("OLLAMA_MINIMAX_URL", "https://ollama.com")
         monkeypatch.setenv("OLLAMA_API_KEY", "sk-customollamacloudkey")
         upstream, url, key, role = resolve_model_config("minimax-m3:cloud")
         assert url == "https://ollama.com"
         assert key == "sk-customollamacloudkey"
+
+    def test_resolve_local_ollama_model(self):
+        # Explicit model in models.json
+        upstream, url, key, role = resolve_model_config("qwen2.5-coder:32b")
+        assert upstream == "qwen2.5-coder:32b"
+        from opencode_proxy.config import OLLAMA_LOCAL_URL, is_anthropic_compat
+        assert url == OLLAMA_LOCAL_URL
+        assert key == "ollama"
+        assert is_anthropic_compat(upstream, url) is True
+
+        # Unmapped local model with colon or prefix
+        upstream2, url2, key2, role2 = resolve_model_config("ollama/codellama:7b")
+        assert upstream2 == "codellama:7b"
+        assert url2 == OLLAMA_LOCAL_URL
+        assert is_anthropic_compat(upstream2, url2) is True

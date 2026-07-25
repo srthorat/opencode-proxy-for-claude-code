@@ -9,7 +9,15 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from .auth import check_auth
 from .client import get_client
-from .config import _ANTHROPIC_COMPAT_MODELS, FREE_AUTO_MODELS, GO_API_KEY, MODEL_MAP, UPSTREAM_API_KEY, UPSTREAM_URL
+from .config import (
+    FREE_AUTO_MODELS,
+    GO_API_KEY,
+    MODEL_MAP,
+    UPSTREAM_API_KEY,
+    UPSTREAM_URL,
+    _ANTHROPIC_COMPAT_MODELS,
+    is_anthropic_compat,
+)
 from .context import RequestContext
 from .conversion.request import _anthropic_to_openai
 from .conversion.response import _openai_to_anthropic
@@ -28,9 +36,9 @@ _STRIP_QS = {"beta", "betas"}
 _RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
 
 
-def _is_openai_compat(model_name: str) -> bool:
+def _is_openai_compat(model_name: str, target_url: str = "") -> bool:
     """Return True when the model uses OpenAI /chat/completions format."""
-    return model_name not in _ANTHROPIC_COMPAT_MODELS
+    return not is_anthropic_compat(model_name, target_url)
 
 
 # ---------------------------------------------------------------------------
@@ -148,7 +156,7 @@ async def _maybe_convert_protocol(ctx: RequestContext) -> None:
     ctx.need_protocol_conv = (
         ctx.path == "/v1/messages"
         and ctx.resolved_model is not None
-        and _is_openai_compat(ctx.resolved_model)
+        and _is_openai_compat(ctx.resolved_model, ctx.per_request_upstream_url or "")
         and not ctx.is_direct  # direct-provider: client speaks the provider's native protocol
     )
 
@@ -272,7 +280,7 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
         _active_pool = None
         if model in FREE_AUTO_MODELS and pool.has_keys():
             _active_pool = pool
-        elif model in _ANTHROPIC_COMPAT_MODELS and ollama_pool.has_keys():
+        elif is_anthropic_compat(model, ctx.per_request_upstream_url or "") and ollama_pool.has_keys():
             _active_pool = ollama_pool
 
         if _active_pool:
