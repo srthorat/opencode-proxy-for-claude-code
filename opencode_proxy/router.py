@@ -13,6 +13,7 @@ from .config import (
     DIRECT_KEY,
     DIRECT_URL,
     MODEL_MAP,
+    OLLAMA_API_KEY,
     OLLAMA_URL,
     UPSTREAM_API_KEY,
     UPSTREAM_URL,
@@ -267,7 +268,10 @@ def resolve_model_config(name: str):
         if isinstance(key_val, str) and key_val:
             if key_val.startswith("env:"):
                 envname = key_val.split("env:", 1)[1]
-                upstream_api_key = os.getenv(envname, upstream_api_key)
+                if envname == "OLLAMA_API_KEY":
+                    upstream_api_key = os.getenv(envname, OLLAMA_API_KEY)
+                else:
+                    upstream_api_key = os.getenv(envname, upstream_api_key)
             else:
                 upstream_api_key = key_val
 

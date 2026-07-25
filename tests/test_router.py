@@ -449,10 +449,18 @@ class TestResolveModelConfig:
         upstream, url, key, role = resolve_model_config("opencode-go/non-existent-model")
         assert upstream == "non-existent-model"
 
-    def test_resolve_ollama_model(self):
+    def test_resolve_ollama_model(self, monkeypatch):
+        # Default behavior
         upstream, url, key, role = resolve_model_config("minimax-m3:cloud")
         assert upstream == "minimax-m3:cloud"
         from opencode_proxy.config import OLLAMA_URL
         assert url == OLLAMA_URL
         assert key == "ollama"
         assert role == "free_coders/general"
+
+        # Behavior with environment variables set
+        monkeypatch.setenv("OLLAMA_MINIMAX_URL", "https://ollama.com")
+        monkeypatch.setenv("OLLAMA_API_KEY", "sk-customollamacloudkey")
+        upstream, url, key, role = resolve_model_config("minimax-m3:cloud")
+        assert url == "https://ollama.com"
+        assert key == "sk-customollamacloudkey"
