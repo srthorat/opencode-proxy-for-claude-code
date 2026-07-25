@@ -11,7 +11,6 @@ from auth import check_auth
 from client import get_client
 from config import _ANTHROPIC_COMPAT_MODELS, FREE_AUTO_MODELS, GO_API_KEY, MODEL_MAP, UPSTREAM_API_KEY, UPSTREAM_URL
 from context import RequestContext
-from conversion.google import _anthropic_to_google, _google_stream_to_anthropic, _google_to_anthropic
 from conversion.request import _anthropic_to_openai
 from conversion.response import _openai_to_anthropic
 from conversion.streaming import _openai_stream_to_anthropic
@@ -126,12 +125,7 @@ async def _sanitize_and_route(ctx: RequestContext) -> None:
             # Go-tier isolation: always use the dedicated go key for /zen/go/ requests.
             if GO_API_KEY and "/zen/go" in (ctx.per_request_upstream_url or ""):
                 ctx.per_request_upstream_api_key = GO_API_KEY
-            ctx.is_google = (
-                isinstance(ctx.per_request_upstream_url, str)
-                and "generativelanguage.googleapis.com" in ctx.per_request_upstream_url
-            )
-            if ctx.is_google and thinking_val:
-                payload["thinking"] = thinking_val
+            ctx.is_google = False
 
         ctx.send_content = json.dumps(payload).encode("utf-8")
 
@@ -149,16 +143,7 @@ async def _maybe_convert_protocol(ctx: RequestContext) -> None:
 
     Sets ctx.need_protocol_conv and rewrites ctx.send_content if conversion is needed.
     """
-    if ctx.is_google:
-        if ctx.path == "/v1/messages" and ctx.send_content:
-            ctx.pre_conv_content = ctx.send_content  # saved for fallback re-conversion
-            try:
-                google_payload = _anthropic_to_google(json.loads(ctx.send_content.decode("utf-8")))
-                ctx.send_content = json.dumps(google_payload).encode("utf-8")
-                logger.info("Protocol: Anthropic→Google GenAI for model=%s", ctx.resolved_model)
-            except Exception as exc:
-                logger.error("Anthropic→Google GenAI conversion failed: %s", exc)
-        return
+
 
     ctx.need_protocol_conv = (
         ctx.path == "/v1/messages"
@@ -192,25 +177,7 @@ def _build_target_url(ctx: RequestContext) -> None:
     base = ctx.per_request_upstream_url.rstrip("/")
     path = ctx.path
 
-    if ctx.is_google:
-        if "v1beta" not in base:
-            base = f"{base}/v1beta"
 
-        is_stream = False
-        if ctx.send_content:
-            try:
-                p = json.loads(ctx.send_content.decode("utf-8"))
-                is_stream = p.get("stream", False)
-            except Exception:
-                pass
-
-        action = "streamGenerateContent" if is_stream else "generateContent"
-        model_name = ctx.resolved_model or ""
-        if model_name.startswith("google/"):
-            model_name = model_name[len("google/") :]
-
-        ctx.target_url = f"{base}/models/{model_name}:{action}"
-        return
 
     if ctx.need_protocol_conv and path == "/v1/messages":
         path = "/chat/completions"
@@ -283,31 +250,21 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
             ctx.config_model_key = config_key
             ctx.per_request_upstream_url = url
             ctx.per_request_upstream_api_key = key
-            ctx.is_google = isinstance(url, str) and "generativelanguage.googleapis.com" in url
+            ctx.is_google = False
 
             # Re-run protocol conversion when fallback uses a different protocol
             ctx.send_content = ctx.pre_conv_content or ctx.body
-            if ctx.is_google:
-                if ctx.send_content:
-                    try:
-                        google_payload = _anthropic_to_google(json.loads(ctx.send_content.decode("utf-8")))
-                        ctx.send_content = json.dumps(google_payload).encode("utf-8")
-                        ctx.need_protocol_conv = False
-                    except Exception as exc:
-                        logger.error("Fallback Google protocol conversion failed: %s — skipping %s", exc, model)
-                        continue
-            else:
-                if need_conv != ctx.need_protocol_conv:
-                    ctx.need_protocol_conv = need_conv
-                if ctx.need_protocol_conv and ctx.send_content:
-                    try:
-                        oai = _anthropic_to_openai(json.loads(ctx.send_content.decode("utf-8")))
-                        ctx.send_content = json.dumps(oai).encode("utf-8")
-                    except Exception as exc:
-                        logger.error("Fallback OpenAI protocol conversion failed: %s — skipping %s", exc, model)
-                        continue
-                elif not ctx.need_protocol_conv:
-                    ctx.send_content = ctx.pre_conv_content or ctx.body
+            if need_conv != ctx.need_protocol_conv:
+                ctx.need_protocol_conv = need_conv
+            if ctx.need_protocol_conv and ctx.send_content:
+                try:
+                    oai = _anthropic_to_openai(json.loads(ctx.send_content.decode("utf-8")))
+                    ctx.send_content = json.dumps(oai).encode("utf-8")
+                except Exception as exc:
+                    logger.error("Fallback OpenAI protocol conversion failed: %s — skipping %s", exc, model)
+                    continue
+            elif not ctx.need_protocol_conv:
+                ctx.send_content = ctx.pre_conv_content or ctx.body
 
             _build_target_url(ctx)
 
@@ -334,12 +291,9 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
             ctx.headers.pop("authorization", None)
             ctx.headers.pop("x-goog-api-key", None)
             if _active_key:
-                if ctx.is_google:
-                    ctx.headers["x-goog-api-key"] = _active_key
-                else:
-                    ctx.headers["authorization"] = f"Bearer {_active_key}"
+                ctx.headers["authorization"] = f"Bearer {_active_key}"
 
-            auth_present = "yes" if (ctx.headers.get("authorization") or ctx.headers.get("x-goog-api-key")) else "no"
+            auth_present = "yes" if ctx.headers.get("authorization") else "no"
             model_label = f" model={ctx.resolved_model}" if ctx.resolved_model else ""
             logger.info(
                 "Forwarding %s %s -> %s (auth=%s%s%s)",
@@ -469,36 +423,7 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
 
         # ── Protocol-converted response ───────────────────────────────────────
         # ── Protocol-converted response ───────────────────────────────────────
-        if ctx.is_google:
-            # Google streaming responses use text/event-stream, or we can check the URL
-            is_stream = upstream_resp.headers.get("content-type", "").startswith(
-                "text/event-stream"
-            ) or "streamGenerateContent" in (ctx.target_url or "")
-            if is_stream:
 
-                async def converted_stream():
-                    try:
-                        async for chunk in _google_stream_to_anthropic(upstream_resp, ctx.resolved_model or ""):
-                            yield chunk
-                    except Exception as exc:
-                        logger.error("Google GenAI stream conversion error: %s", exc)
-                    finally:
-                        await upstream_resp.aclose()
-
-                resp_headers = dict(response_headers)
-                resp_headers["content-type"] = "text/event-stream; charset=utf-8"
-                resp_headers["x-accel-buffering"] = "no"
-                return StreamingResponse(converted_stream(), status_code=200, headers=resp_headers)
-            else:
-                try:
-                    google_body = await upstream_resp.aread()
-                    await upstream_resp.aclose()
-                    anthropic_resp = _google_to_anthropic(json.loads(google_body), ctx.resolved_model or "")
-                    return JSONResponse(anthropic_resp, status_code=200)
-                except Exception as exc:
-                    logger.error("Google→Anthropic conversion failed: %s", exc)
-                    await upstream_resp.aclose()
-                    return JSONResponse({"error": "response conversion failed"}, status_code=500)
 
         if ctx.need_protocol_conv:
             is_stream = upstream_resp.headers.get("content-type", "").startswith("text/event-stream")
