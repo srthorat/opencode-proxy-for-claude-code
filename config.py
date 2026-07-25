@@ -86,67 +86,58 @@ CODER_MAP_FREE: dict[str, str] = {
 }
 
 # Free global tier (free-global/v1) — open-source/global providers only.
-# All entries are genuinely free and verified stable (no intermittent 429s).
-# No OpenCode go-subscription, no direct ZAI, no OpenRouter gpt-oss (rate-limited).
-# For GLM via OpenCode subscription, use the go tier (opencode-go/glm-5.2).
 CODER_MAP_FREE_GLOBAL: dict[str, str] = {
-    "tier1": "free-global/cohere/north-mini-code-free",  # core free global tier (OpenRouter, 256K)
-    "code": "free-global/cohere/north-mini-code-free",  # code + reasoning
-    "creative": "free-global/google/gemma-4-31b-it",  # creative tasks (gpt-oss dropped: rate-limited)
-    "image+reasoning": "free-global/google/gemma-4-31b-it",  # image understanding + reasoning
-    "general": "free-global/cohere/north-mini-code-free",  # general default
-    "long": "free-global/cohere/north-mini-code-free",  # 256K context for long text
-    "reasoning": "free-global/google/gemma-4-31b-it",  # reasoning-capable, free
+    "tier1": "mimo-v2.5-free",
+    "code": "north-mini-code-free",
+    "creative": "mimo-v2.5-free",
+    "image+reasoning": "mimo-v2.5-free",
+    "general": "mimo-v2.5-free",
+    "long": "mimo-v2.5-free",
+    "reasoning": "mimo-v2.5-free",
 }
 
 # Go paid tier (zen/go/v1) — best-in-class per category.
-# Model IDs from https://opencode.ai/docs/go/
-# Anthropic-compat (/v1/messages):      minimax-m3, minimax-m2.7, minimax-m2.5,
-#                                        qwen3.7-max, qwen3.7-plus, qwen3.6-plus
-# OpenAI-compat (/v1/chat/completions): grok-4.5, kimi-k3, kimi-k2.7-code, kimi-k2.6,
-#                                        deepseek-v4-pro, deepseek-v4-flash, mimo-v2.5,
-#                                        mimo-v2.5-pro, glm-5.2, glm-5.1
 CODER_MAP_GO: dict[str, str] = {
-    "code": "opencode-go/kimi-k3",  # flagship code, algorithms, multi-file debug
-    "reasoning": "opencode-go/grok-4.5",  # flagship reasoning, math, architecture tradeoffs
-    "long": "opencode-go/minimax-m3",  # large context, documents, summarization
-    "creative": "opencode-go/qwen3.7-plus",  # writing, creative, translation
-    "agent": "opencode-go/mimo-v2.5-pro",  # multi-step agentic, tool-use, planning
-    "general": "opencode-go/grok-4.5",  # everything else — flagship general default
-    "fast": "opencode-go/kimi-k3",  # quick go-tier tasks
+    "code": "north-mini-code-free",
+    "reasoning": "mimo-v2.5-free",
+    "long": "mimo-v2.5-free",
+    "creative": "mimo-v2.5-free",
+    "agent": "mimo-v2.5-free",
+    "general": "mimo-v2.5-free",
+    "fast": "deepseek-v4-flash-free",
 }
 
 # Go-all tier includes all remaining models
 CODER_MAP_GO_ALL: dict[str, str] = {
     # Level-based category mappings to cover remaining models
-    "code:4": "opencode-go/kimi-k3",
-    "code:3": "opencode-go/kimi-k3",
-    "code:2": "opencode-go/kimi-k3",
-    "reasoning:4": "opencode-go/grok-4.5",
-    "reasoning:3": "opencode-go/grok-4.5",
-    "reasoning:2": "opencode-go/grok-4.5",
-    "long:3": "opencode-go/minimax-m3",
-    "long:2": "opencode-go/minimax-m3",
-    "long:1": "opencode-go/minimax-m3",
-    "long:0": "opencode-go/minimax-m3",
-    "creative:3": "opencode-go/qwen3.7-plus",
-    "creative:2": "opencode-go/qwen3.7-plus",
-    "agent:3": "opencode-go/mimo-v2.5-pro",
-    "agent:2": "opencode-go/mimo-v2.5-pro",
-    "general:4": "opencode-go/grok-4.5",
-    "general:3": "opencode-go/grok-4.5",
-    "general:2": "opencode-go/grok-4.5",
-    "general:1": "opencode-go/grok-4.5",
-    "fast:3": "opencode-go/kimi-k3",
-    "fast:2": "opencode-go/kimi-k3",
+    "code:4": "north-mini-code-free",
+    "code:3": "north-mini-code-free",
+    "code:2": "north-mini-code-free",
+    "reasoning:4": "mimo-v2.5-free",
+    "reasoning:3": "mimo-v2.5-free",
+    "reasoning:2": "mimo-v2.5-free",
+    "long:3": "mimo-v2.5-free",
+    "long:2": "mimo-v2.5-free",
+    "long:1": "mimo-v2.5-free",
+    "long:0": "mimo-v2.5-free",
+    "creative:3": "mimo-v2.5-free",
+    "creative:2": "mimo-v2.5-free",
+    "agent:3": "mimo-v2.5-free",
+    "agent:2": "mimo-v2.5-free",
+    "general:4": "mimo-v2.5-free",
+    "general:3": "mimo-v2.5-free",
+    "general:2": "mimo-v2.5-free",
+    "general:1": "mimo-v2.5-free",
+    "fast:3": "deepseek-v4-flash-free",
+    "fast:2": "deepseek-v4-flash-free",
     # Category fallbacks (for compatibility or keyword fallbacks)
-    "code": "opencode-go/kimi-k3",
-    "reasoning": "opencode-go/grok-4.5",
-    "long": "opencode-go/minimax-m3",
-    "creative": "opencode-go/qwen3.7-plus",
-    "agent": "opencode-go/mimo-v2.5-pro",
-    "general": "opencode-go/grok-4.5",
-    "fast": "opencode-go/kimi-k3",
+    "code": "north-mini-code-free",
+    "reasoning": "mimo-v2.5-free",
+    "long": "mimo-v2.5-free",
+    "creative": "mimo-v2.5-free",
+    "agent": "mimo-v2.5-free",
+    "general": "mimo-v2.5-free",
+    "fast": "deepseek-v4-flash-free",
 }
 
 

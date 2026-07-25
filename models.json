@@ -2,15 +2,5 @@
   "big-pickle":                    {"url": "env:OPENCODE_FREE_URL", "api_key": "env:OPENCODE_API_KEY", "role": "free_coders/trivial",             "fallbacks": ["north-mini-code-free"]},
   "north-mini-code-free":          {"url": "env:OPENCODE_FREE_URL", "api_key": "env:OPENCODE_API_KEY", "role": "free_coders/simple+classifier",   "fallbacks": ["mimo-v2.5-free"]},
   "deepseek-v4-flash-free":        {"url": "env:OPENCODE_FREE_URL", "api_key": "env:OPENCODE_API_KEY", "role": "free_coders/fast",                "fallbacks": ["mimo-v2.5-free"]},
-  "mimo-v2.5-free":        {"url": "env:OPENCODE_FREE_URL", "api_key": "env:OPENCODE_API_KEY", "role": "free_coders/general",             "fallbacks": ["north-mini-code-free"]},
-
-  "opencode-go/kimi-k3":          {"url": "env:UPSTREAM_URL", "api_key": "env:OPENCODE_API_KEY", "role": "go_coders/code_flagship", "model": "kimi-k3",        "fallbacks": ["opencode-go/grok-4.5"]},
-  "opencode-go/grok-4.5":         {"url": "env:UPSTREAM_URL", "api_key": "env:OPENCODE_API_KEY", "role": "go_coders/flagship",   "model": "grok-4.5",         "fallbacks": ["opencode-go/kimi-k3"]},
-  "opencode-go/mimo-v2.5-pro":    {"url": "env:UPSTREAM_URL", "api_key": "env:OPENCODE_API_KEY", "role": "go_coders/agent",       "model": "mimo-v2.5-pro",    "fallbacks": ["opencode-go/qwen3.7-plus"]},
-  "opencode-go/minimax-m3":       {"url": "env:UPSTREAM_URL", "api_key": "env:OPENCODE_API_KEY", "role": "go_coders/long",        "model": "minimax-m3",       "fallbacks": ["opencode-go/grok-4.5"]},
-  "opencode-go/qwen3.7-plus":     {"url": "env:UPSTREAM_URL", "api_key": "env:OPENCODE_API_KEY", "role": "go_coders/creative",    "model": "qwen3.7-plus",     "fallbacks": ["opencode-go/minimax-m3"]},
-
-  "free-global/cohere/north-mini-code-free":  {"url": "https://openrouter.ai/api/v1", "api_key": "env:OPENROUTER_API_KEY", "role": "free-global/code+reasoning",    "model": "cohere/north-mini-code:free",                  "fallbacks": ["free-global/google/gemma-4-31b-it"]},
-  "free-global/google/gemma-4-31b-it":       {"url": "https://generativelanguage.googleapis.com", "api_key": "env:GOOGLE_API_KEY", "role": "free-global/image+reasoning",    "model": "gemma-4-31b-it",                              "fallbacks": ["free-global/google/gemma-4-26b-a4b-it"]},
-  "free-global/google/gemma-4-26b-a4b-it":   {"url": "https://generativelanguage.googleapis.com", "api_key": "env:GOOGLE_API_KEY", "role": "free-global/image+reasoning",    "model": "gemma-4-26b-a4b-it",                          "fallbacks": ["free-global/cohere/north-mini-code-free"]}
+  "mimo-v2.5-free":                {"url": "env:OPENCODE_FREE_URL", "api_key": "env:OPENCODE_API_KEY", "role": "free_coders/general",             "fallbacks": ["north-mini-code-free"]}
 }

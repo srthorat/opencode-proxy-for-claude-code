@@ -167,18 +167,18 @@ class TestBuildTargetUrl:
 class TestFallbackRouting:
     @pytest.mark.asyncio
     async def test_fallback_routing_uses_config_key(self):
-        # Prepare a mock context with a model key that has fallbacks (e.g., free-global/google/gemma-4-31b-it)
+        # Prepare a mock context with a model key that has fallbacks (e.g., big-pickle)
         ctx = make_ctx(
             method="POST",
             path="/v1/messages",
-            resolved_model="gemma-4-31b-it",
-            config_model_key="free-global/google/gemma-4-31b-it",
-            per_request_upstream_url="https://generativelanguage.googleapis.com",
+            resolved_model="big-pickle",
+            config_model_key="big-pickle",
+            per_request_upstream_url="https://api.opencode.ai/zen/v1",
             need_protocol_conv=True,
             is_auto_routed=True,
         )
 
-        # We need mock responses: 429 for the first model, 200 for the fallback model (big-pickle)
+        # We need mock responses: 429 for the first model, 200 for the fallback model (north-mini-code-free)
         mock_resp_429 = MagicMock()
         mock_resp_429.status_code = 429
         mock_resp_429.headers = {"content-type": "application/json"}
@@ -198,15 +198,15 @@ class TestFallbackRouting:
 
         with patch("forward.get_client", AsyncMock(return_value=mock_client)):
             with patch("forward.resolve_model_config") as mock_resolve:
-                # Mock resolve_model_config for big-pickle fallback
+                # Mock resolve_model_config for north-mini-code-free fallback
                 mock_resolve.side_effect = lambda m: (
-                    ("big-pickle", "https://opencode.ai/zen/v1", "mock-key", None)
-                    if m == "big-pickle"
+                    ("north-mini-code-free", "https://api.opencode.ai/zen/v1", "mock-key", "free_coders/simple+classifier")
+                    if m == "north-mini-code-free"
                     else (
-                        "gemma-4-31b-it",
-                        "https://generativelanguage.googleapis.com",
+                        "big-pickle",
+                        "https://api.opencode.ai/zen/v1",
                         "mock-key",
-                        "free_coders/image+reasoning",
+                        "free_coders/trivial",
                     )
                 )
 
@@ -220,18 +220,18 @@ class TestFallbackRouting:
 
     @pytest.mark.asyncio
     async def test_fallback_routing_on_credits_error(self):
-        # Prepare a mock context with a model key that has fallbacks (e.g., free-global/google/gemma-4-31b-it)
+        # Prepare a mock context with a model key that has fallbacks (e.g., big-pickle)
         ctx = make_ctx(
             method="POST",
             path="/v1/messages",
-            resolved_model="gemma-4-31b-it",
-            config_model_key="free-global/google/gemma-4-31b-it",
-            per_request_upstream_url="https://generativelanguage.googleapis.com",
+            resolved_model="big-pickle",
+            config_model_key="big-pickle",
+            per_request_upstream_url="https://api.opencode.ai/zen/v1",
             need_protocol_conv=True,
             is_auto_routed=True,
         )
 
-        # We need mock responses: 401 CreditsError for the first model, 200 for the fallback model (big-pickle)
+        # We need mock responses: 401 CreditsError for the first model, 200 for the fallback model (north-mini-code-free)
         mock_resp_401 = MagicMock()
         mock_resp_401.status_code = 401
         mock_resp_401.headers = {"content-type": "application/json"}
@@ -251,13 +251,13 @@ class TestFallbackRouting:
         with patch("forward.get_client", AsyncMock(return_value=mock_client)):
             with patch("forward.resolve_model_config") as mock_resolve:
                 mock_resolve.side_effect = lambda m: (
-                    ("big-pickle", "https://opencode.ai/zen/v1", "mock-key", None)
-                    if m == "big-pickle"
+                    ("north-mini-code-free", "https://api.opencode.ai/zen/v1", "mock-key", "free_coders/simple+classifier")
+                    if m == "north-mini-code-free"
                     else (
-                        "gemma-4-31b-it",
-                        "https://generativelanguage.googleapis.com",
+                        "big-pickle",
+                        "https://api.opencode.ai/zen/v1",
                         "mock-key",
-                        "free_coders/image+reasoning",
+                        "free_coders/trivial",
                     )
                 )
 
