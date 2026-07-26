@@ -55,9 +55,24 @@ class KeyPool:
         self._free_url: str = free_url.rstrip("/")
         self._models: set[str] | frozenset[str] = models
         self._health: dict[tuple[str, str], bool] = {}
+        self._latency: dict[str, float] = {}
         self._lock = asyncio.Lock()
 
     # -- Public API -----------------------------------------------------------
+
+    def record_latency(self, model: str, elapsed_seconds: float) -> None:
+        """Record EMA (exponential moving average) response latency for latency-based benchmark routing."""
+        prev = self._latency.get(model, elapsed_seconds)
+        self._latency[model] = round(0.7 * prev + 0.3 * elapsed_seconds, 3)
+
+    def get_fastest_model(self, candidates: list[str]) -> str:
+        """Return the model candidate with the lowest moving-average latency."""
+        if not candidates:
+            return ""
+        healthy = [m for m in candidates if self.get_key(m) is not None]
+        if not healthy:
+            return candidates[0]
+        return min(healthy, key=lambda m: self._latency.get(m, 999.0))
 
     def has_keys(self) -> bool:
         """Return True if at least one key is configured."""
@@ -73,6 +88,7 @@ class KeyPool:
             if self._health.get((key, model), True):
                 return key
         return None
+
 
     def demote(self, key: str, model: str) -> None:
         """Mark (key, model) unhealthy. Called on live 401/429."""

@@ -7,9 +7,10 @@ import httpx
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from .auth import check_auth
-from .client import get_client
+from .http_utils import check_auth
+from .http_utils import get_client
 from .config import (
+    ENABLE_GRAPHIFY_CONTEXT,
     FREE_AUTO_MODELS,
     GO_API_KEY,
     MODEL_MAP,
@@ -22,9 +23,29 @@ from .context import RequestContext
 from .conversion.request import _anthropic_to_openai
 from .conversion.response import _openai_to_anthropic
 from .conversion.streaming import _openai_stream_to_anthropic
+from .distiller import distill_payload_messages
+from .deduplicator import deduplicate_messages
+from .graphify import load_graphify_summary
+
+
+from .personas import get_gstack_workflow_summary
+from .indexer import ensure_workspace_indexed
 from .key_pool import ollama_pool, pool
+from .memory_db import get_workspace_memory_summary
+from .observer import observe_payload
+from .orchestrator import orchestrate_payload
+from .personas import get_default_best_persona
+from .skills_matcher import match_and_get_skills_context
+
+
+
+
+
 from .router import auto_select_model, get_fallbacks, map_claude_model_name, resolve_model_config
 from .sanitization import _sanitize_messages, strip_thinking_from_system
+from .guards import scan_and_redact_secrets
+from .response_cache import get_cached_response, store_cached_response
+
 
 logger = logging.getLogger("opencode-proxy")
 
@@ -64,12 +85,37 @@ async def _sanitize_and_route(ctx: RequestContext) -> None:
 
         if "messages" in payload:
             payload["messages"] = _sanitize_messages(payload["messages"], payload)
+            distill_payload_messages(payload)
+            deduplicate_messages(payload["messages"])
+
+
 
         if "system" in payload:
             payload["system"] = strip_thinking_from_system(payload["system"])
 
+        workspace_path = None
+        if getattr(ctx, "headers", None):
+            hdrs = ctx.headers
+            if isinstance(hdrs, dict):
+                workspace_path = hdrs.get("x-workspace-path") or hdrs.get("x-project-path") or hdrs.get("X-Workspace-Path")
+            elif hasattr(hdrs, "get"):
+                workspace_path = hdrs.get("x-workspace-path") or hdrs.get("x-project-path")
+
+        # Smart Proxy Middle-Layer Orchestrator
+        orchestrated_context = orchestrate_payload(payload, workspace_path=workspace_path)
+        if orchestrated_context:
+            if "system" in payload and isinstance(payload["system"], str):
+                payload["system"] = payload["system"] + "\n\n" + orchestrated_context
+            elif "system" in payload and isinstance(payload["system"], list):
+                payload["system"].append({"type": "text", "text": orchestrated_context})
+            else:
+                payload["system"] = orchestrated_context
+
+
+
         # Strip extended-thinking / betas fields unsupported by OpenCode
         thinking_val = payload.pop("thinking", None)
+
         payload.pop("betas", None)
 
         if "model" in payload:
@@ -337,16 +383,18 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
 
             try:
                 assert ctx.target_url is not None
+                t0 = time.time()
                 upstream_resp = await client.send(
                     client.build_request(ctx.method, ctx.target_url, headers=ctx.headers, content=ctx.send_content),
                     stream=True,
                 )
+
             except httpx.RequestError as exc:
                 logger.error("Upstream request failed (attempt %d): %s", attempt, exc)
                 _req_failed = True
                 break  # exit key loop; outer loop handles continuation
 
-            # ── Key rotation on any error response (free-auto or ollama models) ──
+            # ── Key rotation on error or latency benchmark on success ─────────────────
             if upstream_resp.status_code >= 400 and _active_pool:
                 _active_pool.demote(_active_key, model)
                 _next_key = _active_pool.get_key(model)
@@ -361,8 +409,13 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
                     await upstream_resp.aclose()
                     _active_key = _next_key
                     continue  # retry same model with next key
+            elif upstream_resp.status_code == 200 and _active_pool:
+                elapsed = time.time() - t0
+                _active_pool.record_latency(model, elapsed)
 
             break  # success or unrecoverable — exit key loop
+
+
 
         # ── Handle network-level request failure ───────────────────────────────
         if _req_failed:
@@ -459,7 +512,8 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
                     oai_body = await upstream_resp.aread()
                     await upstream_resp.aclose()
                     anthropic_resp = _openai_to_anthropic(json.loads(oai_body), ctx.resolved_model or "")
-                    return JSONResponse(anthropic_resp, status_code=200)
+                    resp_str, _ = scan_and_redact_secrets(json.dumps(anthropic_resp))
+                    return JSONResponse(json.loads(resp_str), status_code=200)
                 except Exception as exc:
                     logger.error("OpenAI→Anthropic conversion failed: %s", exc)
                     await upstream_resp.aclose()

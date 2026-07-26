@@ -23,6 +23,10 @@ has_cmd() { command -v "$1" >/dev/null 2>&1; }
 
 PORT=${PORT:-8080}
 
+# Auto-install all plugins on first run (skipped on subsequent runs via sentinel)
+echo "Checking plugin setup …"
+"${ROOT_DIR}/scripts/setup.sh" || true
+
 echo "Starting opencode-proxy (port $PORT)."
 
 if has_cmd docker && docker compose version >/dev/null 2>&1; then

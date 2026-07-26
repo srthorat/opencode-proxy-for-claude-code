@@ -1,7 +1,11 @@
-.PHONY: install test lint format typecheck run clean
+.PHONY: install setup test lint format typecheck run clean
 
-install:
+setup:
+	./scripts/setup.sh
+
+install: setup
 	pip install -e ".[dev]"
+
 
 test:
 	pytest tests/ -v

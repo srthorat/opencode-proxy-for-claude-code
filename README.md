@@ -84,3 +84,114 @@ cp .env.example .env
 curl http://localhost:8080/healthz
 # → {"status":"ok","upstream":"https://opencode.ai/zen/v1"}
 ```
+
+---
+
+## Graphify Integration
+
+[Graphify](https://github.com/Graphify-Labs/graphify) builds a queryable, deterministic AST knowledge graph of codebases, SQL schemas, documentation, and config files without relying on vector stores.
+
+### Quick Setup
+
+1. **Setup the `/graphify` skill for Claude Code:**
+   ```bash
+   ./scripts/graphify_setup.sh
+   ```
+
+2. **Generate knowledge graph for your project:**
+   Inside your workspace:
+   ```text
+   /graphify .
+   ```
+
+3. **Optional Proxy System-Prompt Injection:**
+   If you prefer the proxy to automatically inject project graph topology into incoming requests:
+   ```env
+   ENABLE_GRAPHIFY_CONTEXT=true
+   GRAPHIFY_GRAPH_PATH=graph.json
+   ```
+
+---
+
+## Cross-Session Memory with claude-mem
+
+[claude-mem](https://github.com/thedotmack/claude-mem) provides persistent cross-session memory for Claude Code using a local SQLite + FTS5 full-text search database.
+
+### Setup
+
+1. **Install the plugin for Claude Code:**
+   ```bash
+   ./scripts/claude_mem_setup.sh
+   ```
+
+2. **Start the optional Docker worker container:**
+   ```bash
+   docker-compose --profile with-claude-mem up -d
+   ```
+
+---
+
+## Live Code Graph Mapping with claude-code-graph (ccg)
+
+[aibozo/claude-code.graph](https://github.com/aibozo/claude-code.graph) (`ccg`) provides live, incremental AST dependency mapping using `tree-sitter`.
+
+### Setup & Usage
+
+1. **Install `claude-code-graph`:**
+   ```bash
+   ./scripts/claude_code_graph_setup.sh
+   ```
+
+2. **Launch session with live graph mapping:**
+   ```bash
+   ccg start
+   ```
+
+---
+
+## Default Engineering Workflows with gstack
+
+[garrytan/gstack](https://github.com/garrytan/gstack) provides opinionated engineering role skills (`/plan-ceo-review`, `/eng-review`, `/security-review`, `/qa-review`).
+
+### Setup for Default Availability Across Any Repo
+
+1. **Install `gstack` globally:**
+   ```bash
+   ./scripts/install_gstack.sh
+   ```
+
+---
+
+---
+
+## Official Anthropic Plugins (anthropics/claude-plugins-official)
+
+[anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) provides Anthropic's official plugin marketplace.
+
+### Setup for Backend Availability Across Any Repo
+
+1. **Install official Anthropic plugins globally in backend:**
+   ```bash
+   ./scripts/install_official_plugins.sh
+   ```
+
+2. **One-Touch Full Stack Setup:**
+   To install all global skills and plugins (`claude-plugins-official`, `gstack`, `anthropics/skills`, `graphify`, `claude-mem`) at once:
+---
+
+## 5 Proxy Super-Powers & Visual Web Dashboard
+
+`opencode-proxy` includes 5 advanced capabilities out-of-the-box:
+
+1. **AST Code Skeletonizer (`skeletonizer.py`)**: Converts large files into lightweight type/API skeletons (80% token reduction).
+2. **Self-Healing Syntax Pre-Checker (`syntax_checker.py`)**: 1ms `ast.parse` syntax guard before file writes.
+3. **0ms Response Cache (`response_cache.py`)**: Caches deterministic responses in `~/.opencode-proxy/cache.db` (0ms latency & 0 token cost).
+4. **FTS5 Monorepo Linker (`monorepo_linker.py`)**: Cross-links symbol definitions across sibling repositories.
+5. **Visual Web Dashboard (`http://localhost:8080/admin/dashboard`)**: Interactive dashboard showing real-time token savings, SmolLM2 speed, key health, and active workspace memory.
+
+
+
+
+
+
+

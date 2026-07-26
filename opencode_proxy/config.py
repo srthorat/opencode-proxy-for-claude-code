@@ -25,6 +25,22 @@ PROXY_API_KEY: str | None = os.getenv("PROXY_API_KEY")
 DIRECT_URL: str = os.getenv("DIRECT_URL", "").rstrip("/")
 DIRECT_KEY: str | None = os.getenv("DIRECT_KEY")
 
+# Graphify integration settings
+ENABLE_GRAPHIFY_CONTEXT: bool = os.getenv("ENABLE_GRAPHIFY_CONTEXT", "false").lower() in ("true", "1", "yes")
+GRAPHIFY_GRAPH_PATH: str = os.getenv("GRAPHIFY_GRAPH_PATH", "graph.json")
+
+# claude-mem integration settings
+CLAUDE_MEM_URL: str = os.getenv("CLAUDE_MEM_URL", "http://localhost:37777").rstrip("/")
+
+# SmolLM2-135M Local Reasoner settings for real-time skill and context orchestration
+# Default port set to 8789 to avoid port collision with user's local Ollama (11434)
+ENABLE_SMOLLM2_REASONER: bool = os.getenv("ENABLE_SMOLLM2_REASONER", "true").lower() in ("true", "1", "yes")
+SMOLLM2_URL: str = os.getenv("SMOLLM2_URL", "http://localhost:8789/api/generate").rstrip("/")
+SMOLLM2_MODEL: str = os.getenv("SMOLLM2_MODEL", "smollm2:135m")
+# Token Distiller settings for large codebase prompt fitting
+MAX_DISTILL_CHARS: int = int(os.getenv("MAX_DISTILL_CHARS", "3000"))
+
+
 # Dedicated key for the go (paid) tier — isolated from the free-tier key pool.
 # Set OPENCODE_GO_API_KEY in .env; if absent, falls back to UPSTREAM_API_KEY.
 GO_API_KEY: str | None = os.getenv("OPENCODE_GO_API_KEY") or UPSTREAM_API_KEY

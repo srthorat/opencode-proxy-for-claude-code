@@ -173,7 +173,7 @@ class TestRequestSizeLimit:
 
 class TestAuthRejection:
     def test_rejects_without_bearer_when_proxy_key_set(self):
-        with patch("opencode_proxy.auth.PROXY_API_KEY", "test-secret"):
+        with patch("opencode_proxy.http_utils.PROXY_API_KEY", "test-secret"):
             client = get_client()
             resp = client.post(
                 "/v1/messages",
@@ -182,7 +182,7 @@ class TestAuthRejection:
         assert resp.status_code == 401
 
     def test_rejection_returns_error_json(self):
-        with patch("opencode_proxy.auth.PROXY_API_KEY", "test-secret"):
+        with patch("opencode_proxy.http_utils.PROXY_API_KEY", "test-secret"):
             client = get_client()
             resp = client.post(
                 "/v1/messages",
@@ -191,7 +191,7 @@ class TestAuthRejection:
         assert resp.json().get("error") == "unauthorized"
 
     def test_rejects_wrong_key(self):
-        with patch("opencode_proxy.auth.PROXY_API_KEY", "correct-secret"):
+        with patch("opencode_proxy.http_utils.PROXY_API_KEY", "correct-secret"):
             client = get_client()
             resp = client.post(
                 "/v1/messages",
@@ -202,7 +202,7 @@ class TestAuthRejection:
 
     def test_passes_with_correct_key(self):
         """Correct bearer token must pass auth (even if upstream fails)."""
-        with patch("opencode_proxy.auth.PROXY_API_KEY", "correct-secret"):
+        with patch("opencode_proxy.http_utils.PROXY_API_KEY", "correct-secret"):
             # Mock the upstream to avoid real HTTP
             mock_resp = MagicMock()
             mock_resp.status_code = 200
@@ -236,7 +236,7 @@ class TestAuthRejection:
 
     def test_no_auth_required_when_proxy_key_not_set(self):
         """When PROXY_API_KEY is not configured, every request is allowed."""
-        with patch("opencode_proxy.auth.PROXY_API_KEY", None):
+        with patch("opencode_proxy.http_utils.PROXY_API_KEY", None):
             # Use count_tokens — no upstream needed
             client = get_client()
             resp = client.post(

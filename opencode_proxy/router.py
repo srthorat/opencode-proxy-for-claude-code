@@ -4,7 +4,7 @@ import logging
 import os
 from functools import lru_cache
 
-from .client import get_client
+from .http_utils import get_client
 from .config import (
     CODER_MAP_FREE,
     CODER_MAP_FREE_GLOBAL,
@@ -133,6 +133,22 @@ def get_fallbacks(model_name: str) -> list[str]:
     if isinstance(entry, dict):
         return list(entry.get("fallbacks", []))
     return []
+
+
+def get_fallback_model(model_name: str) -> str:
+    """Return a reliable fallback model if the primary model hits a rate limit or 503 error."""
+    fallbacks = get_fallbacks(model_name)
+    if fallbacks:
+        return fallbacks[0]
+
+    # Defaults for free models
+    if "mimo" in model_name.lower():
+        return "deepseek-v4-flash-free"
+    elif "deepseek" in model_name.lower():
+        return "north-mini-code-free"
+
+    return "free-auto"
+
 
 
 def map_claude_model_name(model_name: str) -> str:

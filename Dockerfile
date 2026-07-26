@@ -4,8 +4,10 @@ WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1
 
-# Install curl for healthcheck
-RUN apt-get update -qq && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+# Install curl, git, nodejs, npm for zero-touch auto plugin setup
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    curl git nodejs npm ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies before copying source (preserves Docker layer cache)
 COPY pyproject.toml ./
@@ -13,6 +15,7 @@ RUN python3 -c "import tomllib,subprocess,sys; f=open('pyproject.toml','rb'); de
 
 COPY . /app
 
+RUN chmod +x /app/docker-entrypoint.sh /app/scripts/setup.sh
 RUN useradd --create-home --uid 1001 --shell /bin/bash appuser
 USER appuser
 
@@ -21,4 +24,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD curl -sf http://localhost:8080/healthz || exit 1
 
-CMD ["uvicorn", "opencode_proxy.main:app", "--host", "0.0.0.0", "--port", "8080", "--loop", "asyncio", "--http", "h11"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+
