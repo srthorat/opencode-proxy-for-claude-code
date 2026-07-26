@@ -5,6 +5,9 @@ from typing import Any
 from .config import MAX_DISTILL_CHARS
 from .skeletonizer import skeletonize_code
 from .rtk_compressor import compress_rtk
+from .ccr_archive import archive_large_content
+from .headroom_compact import compact_json_tabular
+from .progressive_aging import age_and_summarize_turns
 
 logger = logging.getLogger("opencode-proxy.distiller")
 
@@ -15,21 +18,28 @@ EXCESS_WHITESPACE_REGEX = re.compile(r"[ \t]+$")
 
 
 def compress_tool_result_content(content: str, max_chars: int | None = None) -> str:
-    """Compress bulky tool outputs (terminal logs, grep results, file reads) to save 50-80% tokens.
+    """Compress bulky tool outputs (terminal logs, grep results, file reads) to save 50-95% tokens.
 
-    Strips ANSI color codes, collapses excess whitespace, applies RTK structural pruning, and truncates repetitive log output.
-    Uses configurable MAX_DISTILL_CHARS threshold (default: 3000) for large repos.
+    Applies CCR archiving for blocks > 30,000 chars, Headroom JSON tabular compaction,
+    RTK structural pruning, and truncation.
     """
     if not content or not isinstance(content, str):
         return content
 
+    # 1. Apply Engine 2: CCR Archiving for massive outputs (> 30,000 chars)
+    archived = archive_large_content(content, threshold=30000)
+    if archived != content:
+        return archived
+
+    # 2. Apply Engine 4: Headroom JSON Tabular Compaction
+    compacted_json = compact_json_tabular(content)
+
+    # 3. Apply Engine 3: RTK structural compression
+    cleaned = compress_rtk(compacted_json)
+
     limit = max_chars if max_chars is not None else MAX_DISTILL_CHARS
 
-    # 1. Apply RTK structural compression (strips ANSI, collapses dividers & blank lines)
-    cleaned = compress_rtk(content)
-
-
-    # 3. Truncate if exceeding max character threshold
+    # 4. Truncate if exceeding max character threshold
     if len(cleaned) > limit:
         head = cleaned[: limit // 2]
         tail = cleaned[-limit // 2 :]
@@ -37,6 +47,7 @@ def compress_tool_result_content(content: str, max_chars: int | None = None) -> 
         cleaned = f"{head}\n\n[... {removed_count} chars truncated by opencode-proxy Token Distiller ...]\n\n{tail}"
 
     return cleaned
+
 
 
 CAVEMAN_REPLACEMENTS = [
@@ -125,7 +136,12 @@ def distill_payload_messages(payload: dict[str, Any], max_chars: int | None = No
     if not isinstance(messages, list):
         return
 
+    # Apply Engine 9: Progressive Aging & Summarization for > 8 multi-turn conversations
+    messages = age_and_summarize_turns(messages, threshold_turns=8)
+    payload["messages"] = messages
+
     limit = max_chars if max_chars is not None else MAX_DISTILL_CHARS
+
 
     for msg in messages:
         if not isinstance(msg, dict):

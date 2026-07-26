@@ -89,12 +89,16 @@ Dynamically pairs prompt intent with the optimal flagship prompt:
 - **1-Shot Autonomous Repair**: If an upstream model response produces an AST syntax error or unit assertion failure, the proxy intercepts the response, feeds the error traceback into a secondary model, and delivers self-repaired code on the **first turn**.
 - **0 Broken Code Delivered**: Developers never receive unclosed brackets or syntax indentation errors.
 
-### 6. Penta-Layer Token Compression Engine (`rtk_compressor.py`, `distiller.py`, `skeletonizer.py`, `deduplicator.py`)
-- **RTK Structural Compression (`rtk_compressor.py`)**: Strips low-entropy markdown dividers, trailing padding, ANSI color noise, and table borders (**15%–40% token savings**).
-- **AST Code Skeletonizer (`skeletonizer.py`)**: Strips function bodies from reference code, preserving AST signatures (**50%–80% code token savings**).
-- **Caveman System Prompt Trimmer (`distiller.py`)**: Translates verbose system instructions into high-density telegraphic directives (**60%–80% system token savings**).
-- **Token Deduplicator (`deduplicator.py`)**: Replaces duplicate file snippets across turns (**40% multi-turn savings**).
-- **Semantic Chatter Pruner (`distiller.py`)**: Strips conversational filler words (*"Sure, here is the code..."*).
+### 6. 8-Engine Token Compression Pipeline (`ccr_archive.py`, `progressive_aging.py`, `headroom_compact.py`, `rtk_compressor.py`, `skeletonizer.py`, `deduplicator.py`, `distiller.py`)
+- **Engine 1: Session Token Deduplicator (`deduplicator.py`)**: Hashes and removes duplicate file snippets across turns (**40% multi-turn savings**).
+- **Engine 2: CCR Content-Context Retrieval Markers (`ccr_archive.py`)**: Archives tool outputs > 30,000 chars into local SQLite store, replacing payload with light reference markers (**90%–95% token savings**).
+- **Engine 3: RTK Structural Compression (`rtk_compressor.py`)**: Strips low-entropy markdown dividers, trailing padding, ANSI color noise, and table borders (**15%–40% token savings**).
+- **Engine 4: Headroom JSON Tabular Compaction (`headroom_compact.py`)**: Converts homogeneous JSON array tool outputs into compact CSV-style tabular strings (**30% lossless token savings**).
+- **Engine 5: AST Code Skeletonizer (`skeletonizer.py`)**: Strips function bodies from reference code, preserving AST signatures (**50%–80% code token savings**).
+- **Engine 6: Caveman System Prompt Trimmer (`distiller.py`)**: Translates verbose system instructions into high-density telegraphic directives (**60%–80% system token savings**).
+- **Engine 7: Progressive Aging & Summarization (`progressive_aging.py`)**: Progressively summarizes older turns (> 8 turns) into 2-sentence key summaries (**50%–70% savings on long sessions**).
+- **Engine 8: Semantic Chatter Pruner (`distiller.py`)**: Strips conversational filler words (*"Sure, here is the code..."*).
+
 
 
 ### 7. Distinguished Engineer 5-Piece Suite
