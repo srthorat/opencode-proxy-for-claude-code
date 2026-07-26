@@ -120,6 +120,12 @@ Inspects generated Python code for undefined `NameError` symbols and automatical
 ### 11. Multi-Provider Smart Balancer (`smart_balancer.py`)
 Tracks Exponential Moving Average (EMA) latency across key pools (`OPENCODE_FREE_URL`, `OLLAMA_LOCAL_URL`, `OLLAMA_MINIMAX_URL`), routing prompts to whichever provider currently has the lowest latency.
 
+### 12. Native Support for Claude Built-In Skills & Protocol Translation (`forward.py`, `skills_matcher.py`)
+- **Built-In Tool Support**: 100% native support for all Claude Code built-in tools (`view_file`, `replace_file_content`, `multi_replace_file_content`, `write_to_file`, `run_command`, `ask_question`, `read_url_content`, `search_web`, `browser_subagent`, `manage_task`, `schedule`).
+- **Two-Way Protocol Translation**: Converts Anthropic `/v1/messages` tool definitions into OpenAI function declarations and translates upstream model `tool_calls` back into Anthropic `tool_use` streaming blocks.
+- **603 Global Skills Auto-Discovery**: Automatically indexes all custom skills in `~/.claude/skills/` and `~/.gemini/config/plugins/` (e.g. `chrome-devtools`, `firebase`, `science`, `a11y-debugging`, `android-cli`).
+
+
 ---
 
 ## 🚀 Quick Start Guide
