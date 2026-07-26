@@ -89,11 +89,13 @@ Dynamically pairs prompt intent with the optimal flagship prompt:
 - **1-Shot Autonomous Repair**: If an upstream model response produces an AST syntax error or unit assertion failure, the proxy intercepts the response, feeds the error traceback into a secondary model, and delivers self-repaired code on the **first turn**.
 - **0 Broken Code Delivered**: Developers never receive unclosed brackets or syntax indentation errors.
 
-### 6. Quad-Layer Token Compression Engine (`distiller.py`, `skeletonizer.py`, `deduplicator.py`)
+### 6. Penta-Layer Token Compression Engine (`rtk_compressor.py`, `distiller.py`, `skeletonizer.py`, `deduplicator.py`)
+- **RTK Structural Compression (`rtk_compressor.py`)**: Strips low-entropy markdown dividers, trailing padding, ANSI color noise, and table borders (**15%–40% token savings**).
 - **AST Code Skeletonizer (`skeletonizer.py`)**: Strips function bodies from reference code, preserving AST signatures (**50%–80% code token savings**).
 - **Caveman System Prompt Trimmer (`distiller.py`)**: Translates verbose system instructions into high-density telegraphic directives (**60%–80% system token savings**).
 - **Token Deduplicator (`deduplicator.py`)**: Replaces duplicate file snippets across turns (**40% multi-turn savings**).
 - **Semantic Chatter Pruner (`distiller.py`)**: Strips conversational filler words (*"Sure, here is the code..."*).
+
 
 ### 7. Distinguished Engineer 5-Piece Suite
 - **ADR Generator (`adr_generator.py`)**: Auto-generates Architecture Decision Records for major system changes.

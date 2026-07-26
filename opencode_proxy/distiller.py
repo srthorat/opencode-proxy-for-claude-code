@@ -4,6 +4,7 @@ from typing import Any
 
 from .config import MAX_DISTILL_CHARS
 from .skeletonizer import skeletonize_code
+from .rtk_compressor import compress_rtk
 
 logger = logging.getLogger("opencode-proxy.distiller")
 
@@ -16,7 +17,7 @@ EXCESS_WHITESPACE_REGEX = re.compile(r"[ \t]+$")
 def compress_tool_result_content(content: str, max_chars: int | None = None) -> str:
     """Compress bulky tool outputs (terminal logs, grep results, file reads) to save 50-80% tokens.
 
-    Strips ANSI color codes, collapses excess whitespace, and truncates repetitive log output.
+    Strips ANSI color codes, collapses excess whitespace, applies RTK structural pruning, and truncates repetitive log output.
     Uses configurable MAX_DISTILL_CHARS threshold (default: 3000) for large repos.
     """
     if not content or not isinstance(content, str):
@@ -24,12 +25,9 @@ def compress_tool_result_content(content: str, max_chars: int | None = None) -> 
 
     limit = max_chars if max_chars is not None else MAX_DISTILL_CHARS
 
-    # 1. Strip ANSI codes
-    cleaned = ANSI_ESCAPE_REGEX.sub("", content)
+    # 1. Apply RTK structural compression (strips ANSI, collapses dividers & blank lines)
+    cleaned = compress_rtk(content)
 
-    # 2. Collapse excess newlines and trailing whitespace
-    cleaned = MULTIPLE_NEWLINES_REGEX.sub("\n\n", cleaned)
-    cleaned = EXCESS_WHITESPACE_REGEX.sub("", cleaned)
 
     # 3. Truncate if exceeding max character threshold
     if len(cleaned) > limit:
