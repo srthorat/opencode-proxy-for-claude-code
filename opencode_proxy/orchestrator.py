@@ -25,8 +25,12 @@ from .obsidian_vault import get_obsidian_vault_summary
 from .query_optimizer import get_query_optimization_context
 from .infra_terraform import get_infra_terraform_context
 from .api_contract import get_api_contract_context
+from .strix_auditor import get_strix_security_audit_context
+from .asset_generator import get_web_asset_generator_context
 from .opus_reasoner import generate_opus_pass1_plan
 from .gemini_graph import query_gemini_workspace_graph
+
+
 
 
 
@@ -177,6 +181,16 @@ def orchestrate_payload(payload: dict[str, Any], workspace_path: str | None = No
         contract_ctx = get_api_contract_context(user_text)
         if contract_ctx:
             sections.append(contract_ctx.strip())
+
+        strix_ctx = get_strix_security_audit_context(user_text)
+        if strix_ctx:
+            sections.append(strix_ctx.strip())
+
+        asset_ctx = get_web_asset_generator_context(user_text)
+        if asset_ctx:
+            sections.append(asset_ctx.strip())
+
+
 
         opus_plan = generate_opus_pass1_plan(user_text)
         if opus_plan:
