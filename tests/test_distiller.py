@@ -34,3 +34,13 @@ def test_distill_payload_messages():
     compressed_text = payload["messages"][0]["content"][0]["content"]
     assert len(compressed_text) < 6000
     assert "Token Distiller" in compressed_text
+
+
+def test_caveman_compression():
+    from opencode_proxy.distiller import compress_system_prompt_caveman
+
+    verbose_sys = "Please prioritize verifiable implementations with automated unit tests and avoid plain-text secret exposure, validate external inputs, and enforce safe defaults."
+    compressed = compress_system_prompt_caveman(verbose_sys)
+    assert "Verifiable code. Auto unit tests." in compressed
+    assert "Zero raw secrets. Validate inputs. Safe defaults." in compressed
+
