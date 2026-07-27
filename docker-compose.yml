@@ -53,6 +53,9 @@ services:
       - OPENAI_TARGET_API_URL=http://opencode-proxy:8080/v1
       - OPENAI_API_KEY=${OPENCODE_API_KEY}
       - HEADROOM_TELEMETRY=off
+      - HEADROOM_LOG_LEVEL=info
+      - LOG_LEVEL=info
+
       # ── Compression tuning (aggressive) ──────────────────────────────────
       - HEADROOM_COMPRESSION_STABLE_AFTER_TURN=1
       - HEADROOM_STALE_READ_COMPRESS_AFTER_TURNS=1

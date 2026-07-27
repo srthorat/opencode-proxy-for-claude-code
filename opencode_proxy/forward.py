@@ -102,15 +102,23 @@ async def _sanitize_and_route(ctx: RequestContext) -> None:
             elif hasattr(hdrs, "get"):
                 workspace_path = hdrs.get("x-workspace-path") or hdrs.get("x-project-path")
 
+        # Log incoming tools from client
+        tools_in_payload = payload.get("tools", [])
+        if tools_in_payload:
+            tool_names = [t.get("name", "") for t in tools_in_payload if isinstance(t, dict) and t.get("name")]
+            logger.info("🧰 [Client Tools] Active tools (%d): %s", len(tool_names), ", ".join(tool_names[:12]))
+
         # Smart Proxy Middle-Layer Orchestrator
         orchestrated_context = orchestrate_payload(payload, workspace_path=workspace_path)
         if orchestrated_context:
+            logger.info("⚡ [Smart Orchestrator] Injected +%d chars of skill & persona context", len(orchestrated_context))
             if "system" in payload and isinstance(payload["system"], str):
                 payload["system"] = payload["system"] + "\n\n" + orchestrated_context
             elif "system" in payload and isinstance(payload["system"], list):
                 payload["system"].append({"type": "text", "text": orchestrated_context})
             else:
                 payload["system"] = orchestrated_context
+
 
 
 
