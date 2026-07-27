@@ -114,7 +114,9 @@ Dynamically pairs prompt intent with the optimal flagship prompt:
 - ☁️ **Cloud Infra & Terraform (`infra_terraform.py`)**: Validates Terraform HCL, Kubernetes pod security, and multi-stage Docker builds.
 - 🔌 **Microservice API Contract (`api_contract.py`)**: Enforces OpenAPI 3.0, Swagger, Protobuf, and gRPC schema backward compatibility.
 - 🎨 **Web Asset Generator (`asset_generator.py`)**: Generates favicons (16x16, 32x32, 96x96, favicon.ico), PWA mobile icons (180x180, 192x192, 512x512), and Open Graph social media banners (1200x630).
+- ✨ **TypeUI Design System (`typeui_designer.py`)**: Injects structured design system tokens, visual style guidelines, Glassmorphism CSS, and WCAG contrast rules. Integrates with `https://mcp.typeui.sh/mcp`.
 - 🛡️ **Strix Security Auditor (`strix_auditor.py`)**: Injects OWASP Top 10 defensive remediation rules into security prompts.
+
 
 ### 9. AST Import Auto-Repair Engine (`ast_repair.py`)
 Inspects generated Python code for undefined `NameError` symbols and automatically injects missing standard library imports (`import json`, `import sys`, `import os`, `import re`, `import time`, `from pathlib import Path`, `import asyncio`, `from typing import Any, Dict, List, Tuple`).

@@ -27,8 +27,10 @@ from .infra_terraform import get_infra_terraform_context
 from .api_contract import get_api_contract_context
 from .strix_auditor import get_strix_security_audit_context
 from .asset_generator import get_web_asset_generator_context
+from .typeui_designer import get_typeui_design_context
 from .opus_reasoner import generate_opus_pass1_plan
 from .gemini_graph import query_gemini_workspace_graph
+
 
 
 
@@ -189,6 +191,11 @@ def orchestrate_payload(payload: dict[str, Any], workspace_path: str | None = No
         asset_ctx = get_web_asset_generator_context(user_text)
         if asset_ctx:
             sections.append(asset_ctx.strip())
+
+        typeui_ctx = get_typeui_design_context(user_text)
+        if typeui_ctx:
+            sections.append(typeui_ctx.strip())
+
 
 
 
