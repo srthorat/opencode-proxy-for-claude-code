@@ -114,9 +114,10 @@ def _anthropic_to_openai(payload: dict) -> dict:
         if key in payload:
             oai[key] = payload[key]
 
-    # Clamp max_tokens for OpenAI-compat backends (e.g. Groq limits max_tokens <= 16384)
-    if "max_tokens" in oai and isinstance(oai["max_tokens"], int) and oai["max_tokens"] > 16384:
-        oai["max_tokens"] = 16384
+    # Clamp max_tokens for OpenAI-compat backends (e.g. Groq TPM limit is 8000 TPM max)
+    if "max_tokens" in oai and isinstance(oai["max_tokens"], int) and oai["max_tokens"] > 4000:
+        oai["max_tokens"] = 4000
+
 
 
     if "tools" in payload:
