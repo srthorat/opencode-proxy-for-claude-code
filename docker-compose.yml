@@ -1,6 +1,8 @@
 services:
   opencode-proxy:
+    container_name: opencode-proxy
     build: .
+
     # Internal only — Headroom connects via Docker network.
     # Not exposed on host; clients use Headroom:8787 instead.
     # To access the proxy directly (bypassing Headroom), add:

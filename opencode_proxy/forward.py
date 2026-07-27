@@ -30,7 +30,8 @@ from .graphify import load_graphify_summary
 
 from .personas import get_gstack_workflow_summary
 from .indexer import ensure_workspace_indexed
-from .key_pool import ollama_pool, pool
+from .key_pool import groq_pool, ollama_pool, pool
+
 from .memory_db import get_workspace_memory_summary
 from .observer import observe_payload
 from .orchestrator import orchestrate_payload
@@ -326,10 +327,13 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
 
         _active_key = key
         _active_pool = None
-        if model in FREE_AUTO_MODELS and pool.has_keys():
+        if "api.groq.com" in (ctx.per_request_upstream_url or "") and groq_pool.has_keys():
+            _active_pool = groq_pool
+        elif model in FREE_AUTO_MODELS and pool.has_keys():
             _active_pool = pool
         elif is_anthropic_compat(model, ctx.per_request_upstream_url or "") and ollama_pool.has_keys():
             _active_pool = ollama_pool
+
 
         if _active_pool:
             _pooled = _active_pool.get_key(model)

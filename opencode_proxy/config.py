@@ -59,6 +59,19 @@ UPSTREAM_API_KEYS: list[str] = [
     if k
 ]
 
+# Ordered list of Groq API keys for key rotation.
+# Add more keys by appending GROQ_API_KEY_2 … _4 in .env.
+GROQ_API_KEYS: list[str] = [
+    k
+    for k in [
+        os.getenv("GROQ_API_KEY"),
+        os.getenv("GROQ_API_KEY_2"),
+        os.getenv("GROQ_API_KEY_3"),
+        os.getenv("GROQ_API_KEY_4"),
+    ]
+    if k
+]
+
 # Ordered list of Ollama API keys for key rotation.
 # Add more keys by appending OLLAMA_API_KEY_2 … _4 in .env.
 OLLAMA_API_KEYS: list[str] = [
@@ -71,6 +84,7 @@ OLLAMA_API_KEYS: list[str] = [
     ]
     if k
 ]
+
 
 # The four free-auto models that participate in key-pool rotation.
 FREE_AUTO_MODELS: frozenset[str] = frozenset(
