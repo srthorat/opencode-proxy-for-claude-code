@@ -3,6 +3,7 @@
   "north-mini-code-free":          {"url": "env:OPENCODE_FREE_URL", "api_key": "env:OPENCODE_API_KEY", "role": "free_coders/simple+classifier",   "fallbacks": ["mimo-v2.5-free"]},
   "deepseek-v4-flash-free":        {"url": "env:OPENCODE_FREE_URL", "api_key": "env:OPENCODE_API_KEY", "role": "free_coders/fast",                "fallbacks": ["mimo-v2.5-free"]},
   "mimo-v2.5-free":                {"url": "env:OPENCODE_FREE_URL", "api_key": "env:OPENCODE_API_KEY", "role": "free_coders/general",             "fallbacks": ["north-mini-code-free"]},
+  "groq-gpt-oss-120b":             {"url": "https://api.groq.com/openai/v1", "api_key": "env:GROQ_API_KEY", "role": "free_coders/general",        "fallbacks": ["groq-llama3.3-70b", "mimo-v2.5-free"]},
   "groq-llama3.3-70b":             {"url": "https://api.groq.com/openai/v1", "api_key": "env:GROQ_API_KEY", "role": "free_coders/general",        "fallbacks": ["mimo-v2.5-free"]},
   "groq-qwen3.6-27b":              {"url": "https://api.groq.com/openai/v1", "api_key": "env:GROQ_API_KEY", "role": "free_coders/general",        "fallbacks": ["mimo-v2.5-free"]},
   "qwen2.5-coder:32b":             {"url": "env:OLLAMA_LOCAL_URL", "api_key": "ollama", "role": "free_coders/general"}
