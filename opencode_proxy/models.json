@@ -3,8 +3,10 @@
   "north-mini-code-free":          {"url": "env:OPENCODE_FREE_URL", "api_key": "env:OPENCODE_API_KEY", "role": "free_coders/simple+classifier",   "fallbacks": ["mimo-v2.5-free"]},
   "deepseek-v4-flash-free":        {"url": "env:OPENCODE_FREE_URL", "api_key": "env:OPENCODE_API_KEY", "role": "free_coders/fast",                "fallbacks": ["mimo-v2.5-free"]},
   "mimo-v2.5-free":                {"url": "env:OPENCODE_FREE_URL", "api_key": "env:OPENCODE_API_KEY", "role": "free_coders/general",             "fallbacks": ["north-mini-code-free"]},
-  "groq-gpt-oss-120b":             {"url": "https://api.groq.com/openai/v1", "api_key": "env:GROQ_API_KEY", "role": "free_coders/general",        "fallbacks": ["groq-qwen3.6-27b", "pollinations-openai-fast"]},
-  "groq-qwen3.6-27b":              {"url": "https://api.groq.com/openai/v1", "api_key": "env:GROQ_API_KEY", "role": "free_coders/general",        "fallbacks": ["pollinations-openai-fast"]},
+  "groq-gpt-oss-120b":             {"url": "https://api.groq.com/openai/v1", "api_key": "env:GROQ_API_KEY", "role": "free_coders/general",        "fallbacks": ["pollinations-openai", "groq-qwen3.6-27b"]},
+  "groq-qwen3.6-27b":              {"url": "https://api.groq.com/openai/v1", "api_key": "env:GROQ_API_KEY", "role": "free_coders/general",        "fallbacks": ["pollinations-deepseek", "mimo-v2.5-free"]},
+  "pollinations-openai":           {"url": "https://gen.pollinations.ai/v1", "api_key": "env:POLLINATIONS_API_KEY", "role": "free_coders/general", "fallbacks": ["pollinations-deepseek", "mimo-v2.5-free"]},
+  "pollinations-deepseek":         {"url": "https://gen.pollinations.ai/v1", "api_key": "env:POLLINATIONS_API_KEY", "role": "free_coders/general", "fallbacks": ["pollinations-openai-fast"]},
   "pollinations-openai-fast":      {"url": "https://text.pollinations.ai/v1", "api_key": "none", "role": "free_coders/general",                    "fallbacks": ["mimo-v2.5-free"]},
   "qwen2.5-coder:32b":             {"url": "env:OLLAMA_LOCAL_URL", "api_key": "ollama", "role": "free_coders/general"}
 }

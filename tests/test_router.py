@@ -457,10 +457,21 @@ class TestResolveModelConfig:
         assert url == "https://api.groq.com/openai/v1"
         assert key == "gsk-testkey456"
 
+        monkeypatch.setenv("POLLINATIONS_API_KEY", "sk-polkey789")
+        upstream, url, key, role = resolve_model_config("pollinations-openai")
+        assert upstream == "pollinations-openai"
+        assert url == "https://gen.pollinations.ai/v1"
+        assert key == "sk-polkey789"
+
+        upstream, url, key, role = resolve_model_config("pollinations-deepseek")
+        assert upstream == "pollinations-deepseek"
+        assert url == "https://gen.pollinations.ai/v1"
+
         upstream, url, key, role = resolve_model_config("pollinations-openai-fast")
         assert upstream == "pollinations-openai-fast"
         assert url == "https://text.pollinations.ai/v1"
         assert key == "none"
+
 
 
 
