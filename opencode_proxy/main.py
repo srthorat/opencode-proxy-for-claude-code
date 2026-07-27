@@ -21,7 +21,8 @@ from .config import (
     UPSTREAM_URL,
 )
 from .forward import forward_request
-from .key_pool import ollama_pool, pool
+from .key_pool import groq_pool, ollama_pool, pool
+
 from .memory_db import init_db as init_memory_db
 from .pattern_memory import init_pattern_db
 from .response_cache import init_cache_db
@@ -75,11 +76,13 @@ async def lifespan(app: FastAPI):
 
     # ── 4. LLM key pool probe ──────────────────────────────────────────────
     logger.info("[Init] Probing all upstream LLM API keys …")
-    await asyncio.gather(pool.probe_all(), ollama_pool.probe_all())
+    await asyncio.gather(pool.probe_all(), ollama_pool.probe_all(), groq_pool.probe_all())
 
     # ── 5. Background key re-probe loops ──────────────────────────────────
     _recheck_task = asyncio.create_task(pool.recheck_loop(interval=60))
     _ollama_recheck_task = asyncio.create_task(ollama_pool.recheck_loop(interval=60))
+    _groq_recheck_task = asyncio.create_task(groq_pool.recheck_loop(interval=60))
+
 
     # ── 6. Startup banner ─────────────────────────────────────────────────
     logger.info(

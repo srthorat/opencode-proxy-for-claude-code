@@ -228,6 +228,9 @@ class KeyPool:
         is /chat/completions (not /v1/chat/completions) to avoid duplication.
         """
         async with sem:
+            from .router import resolve_model_config
+            upstream_model, _, _, _ = resolve_model_config(model)
+
             # Avoid /v1/v1/ duplication: FREE_URL already contains /v1
             base = self._free_url
             if base.endswith("/v1"):
@@ -242,13 +245,14 @@ class KeyPool:
                         "Content-Type": "application/json",
                     },
                     json={
-                        "model": model,
+                        "model": upstream_model,
                         "messages": [{"role": "user", "content": "hi"}],
                         "max_tokens": 1,
                         "stream": False,
                     },
                     timeout=_PROBE_TIMEOUT,
                 )
+
                 if resp.status_code == 200:
                     return key, model, "ok"
                 elif resp.status_code >= 400:
