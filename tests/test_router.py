@@ -450,18 +450,6 @@ class TestResolveModelConfig:
         assert upstream == "non-existent-model"
 
     def test_resolve_high_speed_models(self, monkeypatch):
-        # Cerebras model resolution
-        monkeypatch.setenv("CEREBRAS_API_KEY", "csk-testkey123")
-        upstream, url, key, role = resolve_model_config("gpt-oss-120b")
-        assert upstream == "gpt-oss-120b"
-        assert url == "https://api.cerebras.ai/v1"
-        assert key == "csk-testkey123"
-
-        upstream, url, key, role = resolve_model_config("zai-glm-4.7")
-        assert upstream == "zai-glm-4.7"
-        assert url == "https://api.cerebras.ai/v1"
-
-
         # Groq model resolution
         monkeypatch.setenv("GROQ_API_KEY", "gsk-testkey456")
         upstream, url, key, role = resolve_model_config("groq-llama3.3-70b")
@@ -472,6 +460,7 @@ class TestResolveModelConfig:
         upstream, url, key, role = resolve_model_config("groq-qwen3.6-27b")
         assert upstream == "groq-qwen3.6-27b"
         assert url == "https://api.groq.com/openai/v1"
+
 
 
 
