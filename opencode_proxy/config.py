@@ -16,7 +16,10 @@ UPSTREAM_URL: str = os.getenv("UPSTREAM_URL", "https://api.opencode.ai").rstrip(
 UPSTREAM_API_KEY: str | None = os.getenv("OPENCODE_API_KEY")
 OPENCODE_FREE_URL: str = os.getenv("OPENCODE_FREE_URL", "").rstrip("/")
 OLLAMA_LOCAL_URL: str = os.getenv("OLLAMA_LOCAL_URL", "http://host.docker.internal:11434").rstrip("/")
-OLLAMA_URL: str = os.getenv("OLLAMA_URL", "https://ollama.com").rstrip("/")
+OLLAMA_URL: str = os.getenv("OLLAMA_URL", OLLAMA_LOCAL_URL).rstrip("/")
+
+
+
 OLLAMA_API_KEY: str = os.getenv("OLLAMA_API_KEY", "ollama")
 PORT: int = int(os.getenv("PORT", "8080"))
 # Optional inbound auth — if set, every request must carry "Authorization: Bearer <key>"

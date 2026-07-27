@@ -55,6 +55,10 @@ services:
       - HEADROOM_TELEMETRY=off
       - HEADROOM_LOG_LEVEL=info
       - LOG_LEVEL=info
+      - HEADROOM_VERBOSE=1
+      - RUST_LOG=info
+      - PYTHONUNBUFFERED=1
+
 
       # ── Compression tuning (aggressive) ──────────────────────────────────
       - HEADROOM_COMPRESSION_STABLE_AFTER_TURN=1
