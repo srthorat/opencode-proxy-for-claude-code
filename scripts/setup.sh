@@ -66,12 +66,14 @@ ensure_claude_settings() {
   "model": "groq-gpt-oss-120b",
   "availableModels": [
     "groq-gpt-oss-120b",
+    "groq-qwen3.6-27b",
     "deepseek-v4-flash-free",
     "mimo-v2.5-free",
     "north-mini-code-free",
     "big-pickle",
     "qwen2.5-coder:32b",
     "free-auto"
+
 
   ],
   "env": {
