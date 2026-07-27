@@ -452,10 +452,18 @@ class TestResolveModelConfig:
     def test_resolve_high_speed_models(self, monkeypatch):
         # Cerebras model resolution
         monkeypatch.setenv("CEREBRAS_API_KEY", "csk-testkey123")
-        upstream, url, key, role = resolve_model_config("cerebras-llama3.3-70b")
-        assert upstream == "cerebras-llama3.3-70b"
+        upstream, url, key, role = resolve_model_config("gpt-oss-120b")
+        assert upstream == "gpt-oss-120b"
         assert url == "https://api.cerebras.ai/v1"
         assert key == "csk-testkey123"
+
+        upstream, url, key, role = resolve_model_config("gemma-4-31b")
+        assert upstream == "gemma-4-31b"
+        assert url == "https://api.cerebras.ai/v1"
+
+        upstream, url, key, role = resolve_model_config("zai-glm-4.7")
+        assert upstream == "zai-glm-4.7"
+        assert url == "https://api.cerebras.ai/v1"
 
         # Groq model resolution
         monkeypatch.setenv("GROQ_API_KEY", "gsk-testkey456")
@@ -463,6 +471,7 @@ class TestResolveModelConfig:
         assert upstream == "groq-qwen2.5-coder-32b"
         assert url == "https://api.groq.com/openai/v1"
         assert key == "gsk-testkey456"
+
 
 
     def test_resolve_local_ollama_model(self):
