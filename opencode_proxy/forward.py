@@ -349,9 +349,14 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
             if ctx.send_content is not None:
                 ctx.headers["content-length"] = str(len(ctx.send_content))
             ctx.headers.pop("authorization", None)
+            ctx.headers.pop("x-api-key", None)
             ctx.headers.pop("x-goog-api-key", None)
+            ctx.headers.pop("anthropic-version", None)
+            ctx.headers.pop("anthropic-beta", None)
             if _active_key and _active_key != "none":
                 ctx.headers["authorization"] = f"Bearer {_active_key}"
+
+
 
 
             auth_present = "yes" if ctx.headers.get("authorization") else "no"

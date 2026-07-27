@@ -66,15 +66,13 @@ ensure_claude_settings() {
   "model": "groq-gpt-oss-120b",
   "availableModels": [
     "groq-gpt-oss-120b",
-    "pollinations-openai",
-    "pollinations-deepseek",
-    "pollinations-openai-fast",
     "deepseek-v4-flash-free",
     "mimo-v2.5-free",
     "north-mini-code-free",
     "big-pickle",
     "qwen2.5-coder:32b",
     "free-auto"
+
   ],
   "env": {
     "ANTHROPIC_BASE_URL": "http://localhost:8787",

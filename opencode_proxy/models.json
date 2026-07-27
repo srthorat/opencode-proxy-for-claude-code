@@ -4,8 +4,5 @@
   "deepseek-v4-flash-free":        {"url": "env:OPENCODE_FREE_URL", "api_key": "env:OPENCODE_API_KEY", "role": "free_coders/fast",                "fallbacks": ["mimo-v2.5-free"]},
   "mimo-v2.5-free":                {"url": "env:OPENCODE_FREE_URL", "api_key": "env:OPENCODE_API_KEY", "role": "free_coders/general",             "fallbacks": ["north-mini-code-free"]},
   "groq-gpt-oss-120b":             {"url": "https://api.groq.com/openai/v1", "model": "openai/gpt-oss-120b", "api_key": "env:GROQ_API_KEY", "role": "free_coders/general", "fallbacks": ["mimo-v2.5-free"]},
-  "pollinations-openai":           {"url": "https://gen.pollinations.ai/v1", "model": "openai", "api_key": "env:POLLINATIONS_API_KEY", "role": "free_coders/general", "fallbacks": ["groq-gpt-oss-120b", "mimo-v2.5-free"]},
-  "pollinations-deepseek":         {"url": "https://gen.pollinations.ai/v1", "model": "deepseek", "api_key": "env:POLLINATIONS_API_KEY", "role": "free_coders/general", "fallbacks": ["groq-gpt-oss-120b", "mimo-v2.5-free"]},
-  "pollinations-openai-fast":      {"url": "https://text.pollinations.ai/v1", "model": "openai-fast", "api_key": "none", "role": "free_coders/general", "fallbacks": ["groq-gpt-oss-120b", "mimo-v2.5-free"]},
   "qwen2.5-coder:32b":             {"url": "env:OLLAMA_LOCAL_URL", "api_key": "ollama", "role": "free_coders/general"}
 }
