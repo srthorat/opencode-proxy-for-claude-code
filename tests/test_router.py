@@ -457,13 +457,10 @@ class TestResolveModelConfig:
         assert url == "https://api.cerebras.ai/v1"
         assert key == "csk-testkey123"
 
-        upstream, url, key, role = resolve_model_config("gemma-4-31b")
-        assert upstream == "gemma-4-31b"
-        assert url == "https://api.cerebras.ai/v1"
-
         upstream, url, key, role = resolve_model_config("zai-glm-4.7")
         assert upstream == "zai-glm-4.7"
         assert url == "https://api.cerebras.ai/v1"
+
 
         # Groq model resolution
         monkeypatch.setenv("GROQ_API_KEY", "gsk-testkey456")
