@@ -348,8 +348,9 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
                 ctx.headers["content-length"] = str(len(ctx.send_content))
             ctx.headers.pop("authorization", None)
             ctx.headers.pop("x-goog-api-key", None)
-            if _active_key:
+            if _active_key and _active_key != "none":
                 ctx.headers["authorization"] = f"Bearer {_active_key}"
+
 
             auth_present = "yes" if ctx.headers.get("authorization") else "no"
             model_label = f" model={ctx.resolved_model}" if ctx.resolved_model else ""
