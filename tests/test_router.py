@@ -464,10 +464,15 @@ class TestResolveModelConfig:
 
         # Groq model resolution
         monkeypatch.setenv("GROQ_API_KEY", "gsk-testkey456")
-        upstream, url, key, role = resolve_model_config("groq-qwen2.5-coder-32b")
-        assert upstream == "groq-qwen2.5-coder-32b"
+        upstream, url, key, role = resolve_model_config("groq-llama3.3-70b")
+        assert upstream == "groq-llama3.3-70b"
         assert url == "https://api.groq.com/openai/v1"
         assert key == "gsk-testkey456"
+
+        upstream, url, key, role = resolve_model_config("groq-qwen3.6-27b")
+        assert upstream == "groq-qwen3.6-27b"
+        assert url == "https://api.groq.com/openai/v1"
+
 
 
 
