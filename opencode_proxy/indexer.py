@@ -196,6 +196,7 @@ def link_monorepo_context(user_text: str, graphs_dir: pathlib.Path | None = None
     if not matched_results:
         return ""
 
+    logger.info("Monorepo Symbol Linker auto-activated: matched %d symbols across repos", len(matched_results))
     lines = ["\n--- MONOREPO CROSS-REPOSITORY SYMBOL LINKER ---"]
     for item in matched_results[:5]:
         sym = item.get("symbol", "")
@@ -206,5 +207,6 @@ def link_monorepo_context(user_text: str, graphs_dir: pathlib.Path | None = None
 
     lines.append("--- END MONOREPO SYMBOLS ---\n")
     return "\n".join(lines)
+
 
 

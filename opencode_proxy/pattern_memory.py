@@ -77,7 +77,12 @@ def search_patterns(query: str, limit: int = 5, db_file: pathlib.Path | None = N
                 """,
                 (query, limit),
             ).fetchall()
-            return [dict(r) for r in rows]
+            results = [dict(r) for r in rows]
+            if results:
+                logger.info("Pattern Memory FTS5 recall: retrieved %d institutional patterns for query %r", len(results), query[:30])
+            return results
+
     except Exception as exc:
         logger.warning("Pattern search failed: %s", exc)
         return []
+
