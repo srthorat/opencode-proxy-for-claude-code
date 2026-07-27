@@ -119,6 +119,10 @@ async def _sanitize_and_route(ctx: RequestContext) -> None:
 
         payload.pop("betas", None)
 
+        if "max_tokens" in payload and isinstance(payload["max_tokens"], int) and payload["max_tokens"] > 16384:
+            payload["max_tokens"] = 16384
+
+
         if "model" in payload:
             incoming_model = payload["model"]
             _model_lower = str(incoming_model).strip().lower()
