@@ -449,20 +449,21 @@ class TestResolveModelConfig:
         upstream, url, key, role = resolve_model_config("opencode-go/non-existent-model")
         assert upstream == "non-existent-model"
 
-    def test_resolve_ollama_model(self, monkeypatch):
-        # Default behavior
-        upstream, url, key, role = resolve_model_config("minimax-m3:cloud")
-        assert upstream == "minimax-m3:cloud"
-        from opencode_proxy.config import OLLAMA_API_KEY, OLLAMA_URL
-        assert url == OLLAMA_URL
-        assert key == OLLAMA_API_KEY
-        assert role == "free_coders/general"
+    def test_resolve_high_speed_models(self, monkeypatch):
+        # Cerebras model resolution
+        monkeypatch.setenv("CEREBRAS_API_KEY", "csk-testkey123")
+        upstream, url, key, role = resolve_model_config("cerebras-llama3.3-70b")
+        assert upstream == "cerebras-llama3.3-70b"
+        assert url == "https://api.cerebras.ai/v1"
+        assert key == "csk-testkey123"
 
-        monkeypatch.setenv("OLLAMA_MINIMAX_URL", "https://ollama.com")
-        monkeypatch.setenv("OLLAMA_API_KEY", "sk-customollamacloudkey")
-        upstream, url, key, role = resolve_model_config("minimax-m3:cloud")
-        assert url == "https://ollama.com"
-        assert key == "sk-customollamacloudkey"
+        # Groq model resolution
+        monkeypatch.setenv("GROQ_API_KEY", "gsk-testkey456")
+        upstream, url, key, role = resolve_model_config("groq-qwen2.5-coder-32b")
+        assert upstream == "groq-qwen2.5-coder-32b"
+        assert url == "https://api.groq.com/openai/v1"
+        assert key == "gsk-testkey456"
+
 
     def test_resolve_local_ollama_model(self):
         # Explicit model in models.json
