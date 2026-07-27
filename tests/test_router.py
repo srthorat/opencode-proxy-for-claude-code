@@ -457,9 +457,11 @@ class TestResolveModelConfig:
         assert url == "https://api.groq.com/openai/v1"
         assert key == "gsk-testkey456"
 
-        upstream, url, key, role = resolve_model_config("groq-qwen3.6-27b")
-        assert upstream == "groq-qwen3.6-27b"
-        assert url == "https://api.groq.com/openai/v1"
+        upstream, url, key, role = resolve_model_config("pollinations-openai-fast")
+        assert upstream == "pollinations-openai-fast"
+        assert url == "https://text.pollinations.ai/v1"
+        assert key == "none"
+
 
 
 
