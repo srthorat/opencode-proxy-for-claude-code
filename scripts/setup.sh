@@ -63,14 +63,29 @@ ensure_claude_settings() {
         echo "  Creating ~/.claude/settings.json …"
         cat > "${settings}" <<'JSON'
 {
-  "model": "free-auto",
-  "availableModels": ["free-auto"],
+  "model": "groq-gpt-oss-120b",
+  "availableModels": [
+    "groq-gpt-oss-120b",
+    "pollinations-openai",
+    "pollinations-deepseek",
+    "pollinations-openai-fast",
+    "deepseek-v4-flash-free",
+    "mimo-v2.5-free",
+    "north-mini-code-free",
+    "big-pickle",
+    "qwen2.5-coder:32b",
+    "free-auto"
+  ],
   "env": {
     "ANTHROPIC_BASE_URL": "http://localhost:8787",
-    "ANTHROPIC_API_KEY": "placeholder-key"
-  }
+    "ANTHROPIC_API_KEY": "placeholder-key",
+
+    "ENABLE_TOOL_SEARCH": "true"
+  },
+  "effortLevel": "medium"
 }
 JSON
+
     else
         echo "  ~/.claude/settings.json exists — ensure ANTHROPIC_BASE_URL=http://localhost:8787"
     fi
