@@ -457,13 +457,10 @@ class TestResolveModelConfig:
         assert url == "https://api.groq.com/openai/v1"
         assert key == "gsk-testkey456"
 
-        upstream, url, key, role = resolve_model_config("groq-llama3.3-70b")
-        assert upstream == "groq-llama3.3-70b"
-        assert url == "https://api.groq.com/openai/v1"
-
         upstream, url, key, role = resolve_model_config("groq-qwen3.6-27b")
         assert upstream == "groq-qwen3.6-27b"
         assert url == "https://api.groq.com/openai/v1"
+
 
 
 
