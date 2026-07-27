@@ -175,7 +175,8 @@ async def _sanitize_and_route(ctx: RequestContext) -> None:
             ctx.resolved_model = upstream_model
             ctx.config_model_key = incoming_model
             ctx.per_request_upstream_url = upstream_url or UPSTREAM_URL
-            ctx.per_request_upstream_api_key = upstream_api_key or UPSTREAM_API_KEY
+            ctx.per_request_upstream_api_key = upstream_api_key if upstream_api_key is not None else UPSTREAM_API_KEY
+
             # Go-tier isolation: always use the dedicated go key for /zen/go/ requests.
             if GO_API_KEY and "/zen/go" in (ctx.per_request_upstream_url or ""):
                 ctx.per_request_upstream_api_key = GO_API_KEY
@@ -296,31 +297,32 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
     client = await get_client()
 
     for attempt, (model, url, key, need_conv, config_key) in enumerate(candidates):
+        ctx.resolved_model = model
+        ctx.config_model_key = config_key
+        ctx.per_request_upstream_url = url
+        ctx.per_request_upstream_api_key = key
+        ctx.need_protocol_conv = need_conv
+        ctx.is_google = False
+
         if attempt > 0:
             prev = candidates[attempt - 1][0]
             logger.info("Fallback %d/%d: %s → %s", attempt, len(candidates) - 1, prev, model)
 
-            ctx.resolved_model = model
-            ctx.config_model_key = config_key
-            ctx.per_request_upstream_url = url
-            ctx.per_request_upstream_api_key = key
-            ctx.is_google = False
-
-            # Re-run protocol conversion when fallback uses a different protocol
-            ctx.send_content = ctx.pre_conv_content or ctx.body
-            if need_conv != ctx.need_protocol_conv:
-                ctx.need_protocol_conv = need_conv
-            if ctx.need_protocol_conv and ctx.send_content:
+        # Re-run protocol conversion if needed for fallback candidate
+        if attempt > 0:
+            if need_conv and ctx.pre_conv_content:
                 try:
-                    oai = _anthropic_to_openai(json.loads(ctx.send_content.decode("utf-8")))
+                    oai = _anthropic_to_openai(json.loads(ctx.pre_conv_content.decode("utf-8")))
                     ctx.send_content = json.dumps(oai).encode("utf-8")
                 except Exception as exc:
                     logger.error("Fallback OpenAI protocol conversion failed: %s — skipping %s", exc, model)
                     continue
-            elif not ctx.need_protocol_conv:
+            else:
                 ctx.send_content = ctx.pre_conv_content or ctx.body
 
-            _build_target_url(ctx)
+        _build_target_url(ctx)
+
+
 
         _active_key = key
         _active_pool = None

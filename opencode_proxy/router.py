@@ -299,10 +299,14 @@ def resolve_model_config(name: str):
                 envname = key_val.split("env:", 1)[1]
                 if envname == "OLLAMA_API_KEY":
                     upstream_api_key = os.getenv(envname, OLLAMA_API_KEY)
+                elif envname in ("GROQ_API_KEY", "POLLINATIONS_API_KEY"):
+                    upstream_api_key = os.getenv(envname, "")
+
                 else:
                     upstream_api_key = os.getenv(envname, upstream_api_key)
             else:
                 upstream_api_key = key_val
+
 
     return upstream_model, upstream_url, upstream_api_key, role
 
