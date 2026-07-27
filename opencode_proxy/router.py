@@ -13,9 +13,6 @@ from .config import (
     DIRECT_KEY,
     DIRECT_URL,
     MODEL_MAP,
-    OLLAMA_API_KEY,
-    OLLAMA_LOCAL_URL,
-    OLLAMA_URL,
     UPSTREAM_API_KEY,
     UPSTREAM_URL,
 )
@@ -238,16 +235,6 @@ def resolve_model_config(name: str):
     role = None
 
     if entry is None:
-        if key.startswith("ollama/"):
-            clean_model = key[len("ollama/") :]
-            return clean_model, OLLAMA_LOCAL_URL, "ollama", "free_coders/general"
-        elif key.startswith("ollama-cloud/"):
-            clean_model = key[len("ollama-cloud/") :]
-            return clean_model, OLLAMA_URL, OLLAMA_API_KEY, "free_coders/general"
-        elif key.endswith(":cloud"):
-            return key, OLLAMA_URL, OLLAMA_API_KEY, "free_coders/general"
-        elif ":" in key:
-            return key, OLLAMA_LOCAL_URL, "ollama", "free_coders/general"
         return upstream_model, upstream_url, upstream_api_key, role
 
     # if mapping is a simple string, use it as model name
@@ -273,10 +260,9 @@ def resolve_model_config(name: str):
         if isinstance(url_val, str) and url_val:
             if url_val.startswith("env:"):
                 envname = url_val.split("env:", 1)[1]
-                if envname == "OLLAMA_LOCAL_URL":
-                    upstream_url = os.getenv(envname, OLLAMA_LOCAL_URL)
-                elif envname in ("OLLAMA_URL", "OLLAMA_MINIMAX_URL"):
-                    upstream_url = os.getenv(envname, OLLAMA_URL)
+                if envname in ("GROQ_API_KEY", "POLLINATIONS_API_KEY"):
+                    # fallback to empty if not set
+                    upstream_url = os.getenv(envname, UPSTREAM_URL)
                 else:
                     upstream_url = os.getenv(envname, UPSTREAM_URL)
             elif url_val == "OPENCODE_URL":
@@ -297,9 +283,7 @@ def resolve_model_config(name: str):
         if isinstance(key_val, str) and key_val:
             if key_val.startswith("env:"):
                 envname = key_val.split("env:", 1)[1]
-                if envname == "OLLAMA_API_KEY":
-                    upstream_api_key = os.getenv(envname, OLLAMA_API_KEY)
-                elif envname in ("GROQ_API_KEY", "POLLINATIONS_API_KEY"):
+                if envname in ("GROQ_API_KEY", "POLLINATIONS_API_KEY"):
                     upstream_api_key = os.getenv(envname, "")
 
                 else:

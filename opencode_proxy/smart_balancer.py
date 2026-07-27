@@ -12,8 +12,6 @@ logger = logging.getLogger("opencode-proxy.smart_balancer")
 
 _provider_latencies: dict[str, float] = {
     "opencode_free": 0.150,
-    "ollama_local": 0.080,
-    "ollama_minimax": 0.200,
 }
 
 

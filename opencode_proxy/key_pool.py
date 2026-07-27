@@ -29,8 +29,6 @@ from .config import (
     _ANTHROPIC_COMPAT_MODELS,
     FREE_AUTO_MODELS,
     GROQ_API_KEYS,
-    OLLAMA_API_KEYS,
-    OLLAMA_URL,
     OPENCODE_FREE_URL,
     UPSTREAM_API_KEYS,
 )
@@ -278,7 +276,6 @@ class KeyPool:
 # ---------------------------------------------------------------------------
 
 pool = KeyPool(keys=UPSTREAM_API_KEYS, free_url=OPENCODE_FREE_URL, models=FREE_AUTO_MODELS)
-ollama_pool = KeyPool(keys=OLLAMA_API_KEYS, free_url=OLLAMA_URL, models=_ANTHROPIC_COMPAT_MODELS)
 groq_pool = KeyPool(
     keys=GROQ_API_KEYS,
     free_url="https://api.groq.com/openai/v1",

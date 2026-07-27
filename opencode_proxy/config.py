@@ -15,12 +15,9 @@ logger = logging.getLogger("opencode-proxy")
 UPSTREAM_URL: str = os.getenv("UPSTREAM_URL", "https://api.opencode.ai").rstrip("/")
 UPSTREAM_API_KEY: str | None = os.getenv("OPENCODE_API_KEY")
 OPENCODE_FREE_URL: str = os.getenv("OPENCODE_FREE_URL", "").rstrip("/")
-OLLAMA_LOCAL_URL: str = os.getenv("OLLAMA_LOCAL_URL", "http://host.docker.internal:11434").rstrip("/")
-OLLAMA_URL: str = os.getenv("OLLAMA_URL", OLLAMA_LOCAL_URL).rstrip("/")
 
 
 
-OLLAMA_API_KEY: str = os.getenv("OLLAMA_API_KEY", "ollama")
 PORT: int = int(os.getenv("PORT", "8080"))
 # Optional inbound auth — if set, every request must carry "Authorization: Bearer <key>"
 PROXY_API_KEY: str | None = os.getenv("PROXY_API_KEY")
@@ -75,18 +72,7 @@ GROQ_API_KEYS: list[str] = [
     if k
 ]
 
-# Ordered list of Ollama API keys for key rotation.
-# Add more keys by appending OLLAMA_API_KEY_2 … _4 in .env.
-OLLAMA_API_KEYS: list[str] = [
-    k
-    for k in [
-        OLLAMA_API_KEY,
-        os.getenv("OLLAMA_API_KEY_2"),
-        os.getenv("OLLAMA_API_KEY_3"),
-        os.getenv("OLLAMA_API_KEY_4"),
-    ]
-    if k
-]
+
 
 
 # The four free-auto models that participate in key-pool rotation.
@@ -194,7 +180,6 @@ CODER_MAP_GO_ALL: dict[str, str] = {
 _ANTHROPIC_COMPAT_MODELS = {
     "minimax-m3:cloud",
     "kimi-k2.7-code:cloud",
-    "qwen2.5-coder:32b",
 }
 
 
@@ -205,8 +190,6 @@ def is_anthropic_compat(model_name: str, target_url: str = "") -> bool:
     if model_name in _ANTHROPIC_COMPAT_MODELS:
         return True
     if ":" in model_name or model_name.endswith(":cloud"):
-        return True
-    if "11434" in target_url or "ollama" in target_url:
         return True
     return False
 

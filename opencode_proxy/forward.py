@@ -30,7 +30,7 @@ from .graphify import load_graphify_summary
 
 from .personas import get_gstack_workflow_summary
 from .indexer import ensure_workspace_indexed
-from .key_pool import groq_pool, ollama_pool, pool
+from .key_pool import groq_pool, pool
 
 from .memory_db import get_workspace_memory_summary
 from .observer import observe_payload
@@ -55,7 +55,7 @@ logger = logging.getLogger("opencode-proxy")
 # OpenCode does not support; anthropic-version is Anthropic-specific.
 _DROP_HEADERS = {"host", "anthropic-beta", "anthropic-version"}
 _STRIP_QS = {"beta", "betas"}
-_RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
+_RETRYABLE_STATUS = frozenset({413, 429, 500, 502, 503, 504})
 
 
 def _is_openai_compat(model_name: str, target_url: str = "") -> bool:
@@ -308,6 +308,23 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
             fb_need_conv = ctx.path == "/v1/messages" and _is_openai_compat(fb_model) and not ctx.is_direct
             candidates.append((fb_model, fb_url or UPSTREAM_URL, fb_key, fb_need_conv, fb))
 
+    # ── Large Payload Optimization (Zero Quality Loss) ────────────────────────
+    # Groq free tier has an 8,000 TPM limit (prompt + max_tokens).
+    # If the payload > 24,000 bytes (~6,000+ tokens), reorder candidates so 128k
+    # big-context models (deepseek-v4-flash-free, mimo-v2.5-free) are tried first.
+    payload_size = len(ctx.send_content or ctx.body or b"")
+    if payload_size > 24000 and candidates and "api.groq.com" in (candidates[0][1] or ""):
+        groq_cand = candidates[0]
+        big_context_cands = [c for c in candidates[1:] if "api.groq.com" not in (c[1] or "")]
+        if big_context_cands:
+            logger.info(
+                "Large payload (%d bytes / ~%d tokens) — routing to 128k big-context model %s (Groq backup)",
+                payload_size,
+                payload_size // 4,
+                big_context_cands[0][0],
+            )
+            candidates = big_context_cands + [groq_cand]
+
     client = await get_client()
 
     for attempt, (model, url, key, need_conv, config_key) in enumerate(candidates):
@@ -344,9 +361,6 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
             _active_pool = groq_pool
         elif model in FREE_AUTO_MODELS and pool.has_keys():
             _active_pool = pool
-        elif is_anthropic_compat(model, ctx.per_request_upstream_url or "") and ollama_pool.has_keys():
-            _active_pool = ollama_pool
-
 
         if _active_pool:
             _pooled = _active_pool.get_key(model)
@@ -420,7 +434,14 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
                 break  # exit key loop; outer loop handles continuation
 
             # ── Key rotation on error or latency benchmark on success ─────────────────
-            if upstream_resp.status_code >= 400 and _active_pool:
+            if upstream_resp.status_code == 413:
+                logger.warning(
+                    "Model %s returned 413 Payload Too Large (TPM limit exceeded) — trying next fallback model candidate",
+                    model,
+                )
+                await upstream_resp.aclose()
+                break  # exit key loop; outer loop will try next candidate model
+            elif upstream_resp.status_code >= 400 and _active_pool:
                 _active_pool.demote(_active_key, model)
                 _next_key = _active_pool.get_key(model)
                 if _next_key and _next_key != _active_key:

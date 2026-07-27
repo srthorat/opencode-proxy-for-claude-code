@@ -64,6 +64,9 @@ def store_pattern(
 def search_patterns(query: str, limit: int = 5, db_file: pathlib.Path | None = None) -> list[dict[str, Any]]:
     """Full-text search (FTS5/BM25) across all stored codebase patterns."""
     try:
+        clean_query = "".join(c if c.isalnum() or c.isspace() else " " for c in query).strip()
+        if not clean_query:
+            return []
         init_pattern_db(db_file)
         with _get_conn(db_file) as conn:
             rows = conn.execute(
@@ -75,11 +78,11 @@ def search_patterns(query: str, limit: int = 5, db_file: pathlib.Path | None = N
                 ORDER BY rank
                 LIMIT ?
                 """,
-                (query, limit),
+                (clean_query, limit),
             ).fetchall()
             results = [dict(r) for r in rows]
             if results:
-                logger.info("Pattern Memory FTS5 recall: retrieved %d institutional patterns for query %r", len(results), query[:30])
+                logger.info("Pattern Memory FTS5 recall: retrieved %d institutional patterns for query %r", len(results), clean_query[:30])
             return results
 
     except Exception as exc:
