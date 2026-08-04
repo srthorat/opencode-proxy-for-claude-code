@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 opencode-proxy http_utils
 ──────────────────────────
@@ -19,26 +21,41 @@ logger = logging.getLogger("opencode-proxy")
 
 # ── Shared async httpx client ────────────────────────────────────────────────
 
-_client: httpx.AsyncClient | None = None
+import asyncio
+
+_client_pool: dict[str | None, httpx.AsyncClient] = {}
 
 
-async def get_client() -> httpx.AsyncClient:
-    """Return the module-level shared httpx client, creating it if necessary."""
-    global _client
-    if _client is None or _client.is_closed:
-        _client = httpx.AsyncClient(
+async def get_client(proxy_url: str | None = None) -> httpx.AsyncClient:
+    """Return the module-level shared httpx client for the given proxy, creating it if necessary."""
+    global _client_pool
+    client = _client_pool.get(proxy_url)
+    if client is None or client.is_closed:
+        client = httpx.AsyncClient(
+            proxy=proxy_url,
             timeout=httpx.Timeout(connect=10.0, read=300.0, write=10.0, pool=10.0),
             limits=httpx.Limits(max_connections=100, max_keepalive_connections=20),
         )
-    return _client
+        _client_pool[proxy_url] = client
+        
+        # Enforce LRU limit to prevent memory leaks from thousands of proxies
+        if len(_client_pool) > 50:
+            oldest_key = next(iter(_client_pool))
+            old_client = _client_pool.pop(oldest_key)
+            if not old_client.is_closed:
+                asyncio.create_task(old_client.aclose())
+                
+    return client
 
 
 async def close_client() -> None:
-    """Close the shared httpx client. Called during application shutdown."""
-    global _client
-    if _client is not None and not _client.is_closed:
-        await _client.aclose()
-        logger.info("Shared httpx client closed")
+    """Close all shared httpx clients. Called during application shutdown."""
+    global _client_pool
+    for proxy_url, client in _client_pool.items():
+        if client is not None and not client.is_closed:
+            await client.aclose()
+    _client_pool.clear()
+    logger.info("Shared httpx clients closed")
 
 
 # ── Bearer token auth ────────────────────────────────────────────────────────

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import logging
 import os
@@ -16,6 +18,17 @@ UPSTREAM_URL: str = os.getenv("UPSTREAM_URL", "https://api.opencode.ai").rstrip(
 UPSTREAM_API_KEY: str | None = os.getenv("OPENCODE_API_KEY")
 OPENCODE_FREE_URL: str = os.getenv("OPENCODE_FREE_URL", "").rstrip("/")
 
+# Ordered list of outbound proxies for IP rotation (comma-separated, e.g. "http://proxy1,http://proxy2")
+OUTBOUND_PROXIES: list[str] = [
+    p.strip() for p in os.getenv("OUTBOUND_PROXIES", "").split(",") if p.strip()
+]
+
+# ProxyScrape URL to automatically scrape free proxies filtered by desired countries (US, India, Singapore)
+AUTO_PROXY_URL: str = os.getenv(
+    "AUTO_PROXY_URL", 
+    "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&country=us,in,sg&protocol=http&timeout=10000"
+)
+
 
 
 PORT: int = int(os.getenv("PORT", "8080"))
@@ -25,29 +38,13 @@ PROXY_API_KEY: str | None = os.getenv("PROXY_API_KEY")
 DIRECT_URL: str = os.getenv("DIRECT_URL", "").rstrip("/")
 DIRECT_KEY: str | None = os.getenv("DIRECT_KEY")
 
-# Graphify integration settings
-ENABLE_GRAPHIFY_CONTEXT: bool = os.getenv("ENABLE_GRAPHIFY_CONTEXT", "false").lower() in ("true", "1", "yes")
-GRAPHIFY_GRAPH_PATH: str = os.getenv("GRAPHIFY_GRAPH_PATH", "graph.json")
-
-# claude-mem integration settings
-CLAUDE_MEM_URL: str = os.getenv("CLAUDE_MEM_URL", "http://localhost:37777").rstrip("/")
-
-# SmolLM2-135M Local Reasoner settings for real-time skill and context orchestration
-# Default port set to 8789 to avoid port collision with user's local Ollama (11434)
-ENABLE_SMOLLM2_REASONER: bool = os.getenv("ENABLE_SMOLLM2_REASONER", "true").lower() in ("true", "1", "yes")
-SMOLLM2_URL: str = os.getenv("SMOLLM2_URL", "http://localhost:8789/api/generate").rstrip("/")
-SMOLLM2_MODEL: str = os.getenv("SMOLLM2_MODEL", "smollm2:135m")
-# Token Distiller settings for large codebase prompt fitting
-MAX_DISTILL_CHARS: int = int(os.getenv("MAX_DISTILL_CHARS", "3000"))
-
 
 # Dedicated key for the go (paid) tier — isolated from the free-tier key pool.
 # Set OPENCODE_GO_API_KEY in .env; if absent, falls back to UPSTREAM_API_KEY.
 GO_API_KEY: str | None = os.getenv("OPENCODE_GO_API_KEY") or UPSTREAM_API_KEY
 
 # Ordered list of OpenCode API keys for free-auto key rotation.
-# Keys 1-4 only — KEY_5 is reserved as the go-tier key (OPENCODE_GO_API_KEY).
-# Add more free keys by appending OPENCODE_API_KEY_2 … _4 in .env.
+# Add more free keys by appending OPENCODE_API_KEY_2 … _10 in .env.
 UPSTREAM_API_KEYS: list[str] = [
     k
     for k in [
@@ -55,19 +52,12 @@ UPSTREAM_API_KEYS: list[str] = [
         os.getenv("OPENCODE_API_KEY_2"),
         os.getenv("OPENCODE_API_KEY_3"),
         os.getenv("OPENCODE_API_KEY_4"),
-    ]
-    if k
-]
-
-# Ordered list of Groq API keys for key rotation.
-# Add more keys by appending GROQ_API_KEY_2 … _4 in .env.
-GROQ_API_KEYS: list[str] = [
-    k
-    for k in [
-        os.getenv("GROQ_API_KEY"),
-        os.getenv("GROQ_API_KEY_2"),
-        os.getenv("GROQ_API_KEY_3"),
-        os.getenv("GROQ_API_KEY_4"),
+        os.getenv("OPENCODE_API_KEY_5"),
+        os.getenv("OPENCODE_API_KEY_6"),
+        os.getenv("OPENCODE_API_KEY_7"),
+        os.getenv("OPENCODE_API_KEY_8"),
+        os.getenv("OPENCODE_API_KEY_9"),
+        os.getenv("OPENCODE_API_KEY_10"),
     ]
     if k
 ]

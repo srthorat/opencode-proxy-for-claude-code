@@ -355,7 +355,7 @@ class TestOpenAIToAnthropic:
         assert result["content"][0] == {"type": "text", "text": "Let me search"}
         assert result["content"][1]["type"] == "tool_use"
 
-    def test_finish_reason_length_maps_to_max_tokens(self):
+    def test_finish_reason_length_maps_to_end_turn(self):
         oai_resp = {
             "id": "x",
             "choices": [
@@ -367,7 +367,7 @@ class TestOpenAIToAnthropic:
             "usage": {},
         }
         result = _openai_to_anthropic(oai_resp, "m")
-        assert result["stop_reason"] == "max_tokens"
+        assert result["stop_reason"] == "end_turn"
 
     def test_unknown_finish_reason_defaults_to_end_turn(self):
         oai_resp = {

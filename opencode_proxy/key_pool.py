@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 key_pool.py — Health-aware API key pool for free-auto model routing.
 
@@ -22,13 +24,17 @@ Usage:
 
 import asyncio
 import logging
+import random
+import time
 
 import httpx
+
+from .config import OUTBOUND_PROXIES
+from .http_utils import get_client
 
 from .config import (
     _ANTHROPIC_COMPAT_MODELS,
     FREE_AUTO_MODELS,
-    GROQ_API_KEYS,
     OPENCODE_FREE_URL,
     UPSTREAM_API_KEYS,
 )
@@ -50,10 +56,11 @@ class KeyPool:
       absent  -> unknown  (probe inconclusive; treated as healthy for routing)
     """
 
-    def __init__(self, keys: list[str], free_url: str, models: set[str] | frozenset[str]) -> None:
+    def __init__(self, keys: list[str], free_url: str, models: set[str] | frozenset[str], key_urls: dict[str, str] | None = None) -> None:
         self._keys: list[str] = keys
         self._free_url: str = free_url.rstrip("/")
         self._models: set[str] | frozenset[str] = models
+        self._key_urls: dict[str, str] = key_urls or {}
         self._health: dict[tuple[str, str], bool] = {}
         self._latency: dict[str, float] = {}
         self._lock = asyncio.Lock()
@@ -88,6 +95,10 @@ class KeyPool:
             if self._health.get((key, model), True):
                 return key
         return None
+
+    def get_url(self, key: str) -> str | None:
+        """Return the specific target URL for this key, or the default free_url."""
+        return self._key_urls.get(key, self._free_url)
 
 
     def demote(self, key: str, model: str) -> None:
@@ -150,9 +161,8 @@ class KeyPool:
         )
 
         sem = asyncio.Semaphore(_PROBE_CONCURRENCY)
-        async with httpx.AsyncClient() as client:
-            tasks = [self._probe_one(client, sem, key, model) for key in self._keys for model in models]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
+        tasks = [self._probe_one(sem, key, model) for key in self._keys for model in models]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Collate results
         summary: dict[str, dict[int, str]] = {m: {} for m in models}
@@ -199,9 +209,8 @@ class KeyPool:
             logger.debug("key-pool: re-probing %d demoted pair(s)...", len(demoted))
             try:
                 sem = asyncio.Semaphore(_PROBE_CONCURRENCY)
-                async with httpx.AsyncClient() as client:
-                    tasks = [self._probe_one(client, sem, k, m) for k, m in demoted]
-                    results = await asyncio.gather(*tasks, return_exceptions=True)
+                tasks = [self._probe_one(sem, k, m) for k, m in demoted]
+                results = await asyncio.gather(*tasks, return_exceptions=True)
                 for result in results:
                     if isinstance(result, Exception):
                         continue
@@ -215,7 +224,6 @@ class KeyPool:
 
     async def _probe_one(
         self,
-        client: httpx.AsyncClient,
         sem: asyncio.Semaphore,
         key: str,
         model: str,
@@ -229,13 +237,18 @@ class KeyPool:
             from .router import resolve_model_config
             upstream_model, _, _, _ = resolve_model_config(model)
 
-            # Avoid /v1/v1/ duplication: FREE_URL already contains /v1
-            base = self._free_url
-            if base.endswith("/v1"):
+            base = self.get_url(key) or self._free_url
+
+            # Avoid /v1/v1/ or /compat/v1/ duplication: check if base already contains versioning
+            if "/v1" in base or "/compat" in base:
                 url = f"{base}/chat/completions"
             else:
                 url = f"{base}/v1/chat/completions"
             try:
+                # Use a random proxy to avoid hitting rate limit on the local IP
+                proxy_url = random.choice(OUTBOUND_PROXIES) if OUTBOUND_PROXIES else None
+                client = await get_client(proxy_url=proxy_url)
+
                 resp = await client.post(
                     url,
                     headers={
@@ -276,9 +289,3 @@ class KeyPool:
 # ---------------------------------------------------------------------------
 
 pool = KeyPool(keys=UPSTREAM_API_KEYS, free_url=OPENCODE_FREE_URL, models=FREE_AUTO_MODELS)
-groq_pool = KeyPool(
-    keys=GROQ_API_KEYS,
-    free_url="https://api.groq.com/openai/v1",
-    models={"groq-gpt-oss-120b", "groq-qwen3.6-27b", "openai/gpt-oss-120b", "qwen/qwen3.6-27b"},
-)
-

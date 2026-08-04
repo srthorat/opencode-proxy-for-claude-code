@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from opencode_proxy.config import FREE_AUTO_MODELS, OLLAMA_URL
+from opencode_proxy.config import FREE_AUTO_MODELS
 from opencode_proxy.forward import _build_target_url, _forward_to_upstream
 from opencode_proxy.key_pool import KeyPool
 from tests.test_forward import make_ctx

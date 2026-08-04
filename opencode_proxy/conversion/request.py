@@ -7,25 +7,38 @@ def _anthropic_to_openai(payload: dict) -> dict:
     oai: dict = {"model": payload.get("model", "")}
     messages: list[dict[str, Any]] = []
 
+    # Detect if we have any images in the entire payload
+    has_images = False
+    for msg in payload.get("messages", []):
+        c = msg.get("content", "")
+        if isinstance(c, list):
+            for b in c:
+                if isinstance(b, dict) and b.get("type") == "image":
+                    has_images = True
+                    break
+
+    def make_content(text: str):
+        return [{"type": "text", "text": text}] if has_images else text
+
     system = payload.get("system")
     if system:
         if isinstance(system, str):
-            messages.append({"role": "system", "content": system})
+            messages.append({"role": "system", "content": make_content(system)})
         elif isinstance(system, list):
             text = "\n".join(b.get("text", "") for b in system if isinstance(b, dict) and b.get("type") == "text")
             if text:
-                messages.append({"role": "system", "content": text})
+                messages.append({"role": "system", "content": make_content(text)})
 
     for msg in payload.get("messages", []):
         role = msg.get("role", "user")
         content = msg.get("content", "")
 
         if isinstance(content, str):
-            messages.append({"role": role, "content": content})
+            messages.append({"role": role, "content": make_content(content)})
             continue
 
         if not isinstance(content, list):
-            messages.append({"role": role, "content": str(content)})
+            messages.append({"role": role, "content": make_content(str(content))})
             continue
 
         # Separate block types
@@ -44,7 +57,7 @@ def _anthropic_to_openai(payload: dict) -> dict:
                     {
                         "role": "tool",
                         "tool_call_id": b.get("tool_use_id", ""),
-                        "content": str(rc),
+                        "content": make_content(str(rc)),
                     }
                 )
             # Preserve any accompanying text blocks as a separate user message so
@@ -52,7 +65,7 @@ def _anthropic_to_openai(payload: dict) -> dict:
             if text_blocks:
                 extra_text = " ".join(b.get("text", "") for b in text_blocks).strip()
                 if extra_text:
-                    messages.append({"role": "user", "content": extra_text})
+                    messages.append({"role": "user", "content": make_content(extra_text)})
             continue
 
         # Tool calls → assistant message with tool_calls
@@ -69,7 +82,8 @@ def _anthropic_to_openai(payload: dict) -> dict:
                 for i, b in enumerate(tool_use_blocks)
             ]
             text = " ".join(b.get("text", "") for b in text_blocks).strip()
-            oai_msg: dict = {"role": role, "content": text or None, "tool_calls": tool_calls}
+            # Ensure content is never None and keeps consistent format
+            oai_msg: dict = {"role": role, "content": make_content(text), "tool_calls": tool_calls}
             messages.append(oai_msg)
             continue
 
@@ -91,8 +105,9 @@ def _anthropic_to_openai(payload: dict) -> dict:
             elif src.get("type") == "url":
                 oai_parts.append({"type": "image_url", "image_url": {"url": src.get("url", "")}})
 
-        if len(oai_parts) == 1 and oai_parts[0]["type"] == "text":
-            messages.append({"role": role, "content": oai_parts[0]["text"]})
+        if not image_blocks:
+            merged_text = "\n\n".join(b.get("text", "") for b in oai_parts if b.get("type") == "text")
+            messages.append({"role": role, "content": make_content(merged_text)})
         elif oai_parts:
             messages.append({"role": role, "content": oai_parts})
         else:
@@ -113,10 +128,6 @@ def _anthropic_to_openai(payload: dict) -> dict:
     ):
         if key in payload:
             oai[key] = payload[key]
-
-    # Clamp max_tokens for OpenAI-compat backends (e.g. Groq TPM limit is 8000 TPM max)
-    if "max_tokens" in oai and isinstance(oai["max_tokens"], int) and oai["max_tokens"] > 4000:
-        oai["max_tokens"] = 4000
 
 
 

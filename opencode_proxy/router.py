@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import hashlib
 import json
 import logging
@@ -200,6 +202,17 @@ def resolve_model_config(name: str):
         return name, UPSTREAM_URL, UPSTREAM_API_KEY, None
 
     key = name.strip()
+    
+    # Claude Code 0.2.x uses strict regexes (e.g., ^claude-3) to identify Anthropic models.
+    # If the user prefixed their custom model with 'claude-3-' or 'claude-', strip it.
+    if key.startswith("claude-3-"):
+        stripped = key[len("claude-3-"):]
+        if stripped in MODEL_MAP:
+            key = stripped
+    elif key.startswith("claude-"):
+        stripped = key[len("claude-"):]
+        if stripped in MODEL_MAP:
+            key = stripped
 
     # direct:<model> — bypass OpenCode entirely, forward to DIRECT_URL with DIRECT_KEY
     if key.startswith("direct:"):
@@ -260,7 +273,7 @@ def resolve_model_config(name: str):
         if isinstance(url_val, str) and url_val:
             if url_val.startswith("env:"):
                 envname = url_val.split("env:", 1)[1]
-                if envname in ("GROQ_API_KEY", "POLLINATIONS_API_KEY"):
+                if envname in ("POLLINATIONS_API_KEY",):
                     # fallback to empty if not set
                     upstream_url = os.getenv(envname, UPSTREAM_URL)
                 else:
@@ -283,7 +296,7 @@ def resolve_model_config(name: str):
         if isinstance(key_val, str) and key_val:
             if key_val.startswith("env:"):
                 envname = key_val.split("env:", 1)[1]
-                if envname in ("GROQ_API_KEY", "POLLINATIONS_API_KEY"):
+                if envname in ("POLLINATIONS_API_KEY",):
                     upstream_api_key = os.getenv(envname, "")
 
                 else:

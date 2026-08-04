@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import json
 import logging
 import time
 import uuid
+import random
 
 import httpx
 from fastapi import Request, Response
@@ -10,8 +13,9 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from .http_utils import check_auth
 from .http_utils import get_client
 from .config import (
-    ENABLE_GRAPHIFY_CONTEXT,
+
     FREE_AUTO_MODELS,
+    OUTBOUND_PROXIES,
     GO_API_KEY,
     MODEL_MAP,
     UPSTREAM_API_KEY,
@@ -23,37 +27,33 @@ from .context import RequestContext
 from .conversion.request import _anthropic_to_openai
 from .conversion.response import _openai_to_anthropic
 from .conversion.streaming import _openai_stream_to_anthropic
-from .distiller import distill_payload_messages
-from .deduplicator import deduplicate_messages
-from .graphify import load_graphify_summary
 
 
-from .personas import get_gstack_workflow_summary
-from .indexer import ensure_workspace_indexed
-from .key_pool import groq_pool, pool
-
-from .memory_db import get_workspace_memory_summary
-from .observer import observe_payload
-from .orchestrator import orchestrate_payload
-from .personas import get_default_best_persona
-from .skills_matcher import match_and_get_skills_context
-
-
-
-
-
+from .proxy_manager import ban_proxy
+from .key_pool import pool
 from .router import auto_select_model, get_fallbacks, map_claude_model_name, resolve_model_config
 from .sanitization import _sanitize_messages, strip_thinking_from_system
-from .guards import scan_and_redact_secrets
-from .response_cache import get_cached_response, store_cached_response
 
 
 logger = logging.getLogger("opencode-proxy")
 
-# Headers dropped from inbound requests before forwarding upstream.
-# anthropic-beta carries beta flags (e.g. interleaved-thinking-2025-05-14) that
-# OpenCode does not support; anthropic-version is Anthropic-specific.
-_DROP_HEADERS = {"host", "anthropic-beta", "anthropic-version"}
+# Headers dropped from inbound requests before forwarding upstream to prevent identity/IP leaks.
+_DROP_HEADERS = {
+    "host",
+    "accept-encoding",
+    "anthropic-beta",
+    "anthropic-version",
+    "cookie",
+    "x-forwarded-for",
+    "x-real-ip",
+    "x-client-ip",
+    "forwarded",
+    "via",
+    "cf-connecting-ip",
+    "true-client-ip",
+    "referer",
+    "origin",
+}
 _STRIP_QS = {"beta", "betas"}
 _RETRYABLE_STATUS = frozenset({413, 429, 500, 502, 503, 504})
 
@@ -86,11 +86,6 @@ async def _sanitize_and_route(ctx: RequestContext) -> None:
 
         if "messages" in payload:
             payload["messages"] = _sanitize_messages(payload["messages"], payload)
-            distill_payload_messages(payload)
-            deduplicate_messages(payload["messages"])
-
-
-
         if "system" in payload:
             payload["system"] = strip_thinking_from_system(payload["system"])
 
@@ -107,20 +102,6 @@ async def _sanitize_and_route(ctx: RequestContext) -> None:
         if tools_in_payload:
             tool_names = [t.get("name", "") for t in tools_in_payload if isinstance(t, dict) and t.get("name")]
             logger.info("🧰 [Client Tools] Active tools (%d): %s", len(tool_names), ", ".join(tool_names[:12]))
-
-        # Smart Proxy Middle-Layer Orchestrator
-        orchestrated_context = orchestrate_payload(payload, workspace_path=workspace_path)
-        if orchestrated_context:
-            logger.info("⚡ [Smart Orchestrator] Injected +%d chars of skill & persona context", len(orchestrated_context))
-            if "system" in payload and isinstance(payload["system"], str):
-                payload["system"] = payload["system"] + "\n\n" + orchestrated_context
-            elif "system" in payload and isinstance(payload["system"], list):
-                payload["system"].append({"type": "text", "text": orchestrated_context})
-            else:
-                payload["system"] = orchestrated_context
-
-
-
 
         # Strip extended-thinking / betas fields unsupported by OpenCode
         thinking_val = payload.pop("thinking", None)
@@ -185,6 +166,8 @@ async def _sanitize_and_route(ctx: RequestContext) -> None:
 
             upstream_model, upstream_url, upstream_api_key, role = resolve_model_config(incoming_model)
             ctx.is_direct = role == "direct"
+            
+
             payload["model"] = upstream_model
             ctx.resolved_model = upstream_model
             ctx.config_model_key = incoming_model
@@ -308,24 +291,9 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
             fb_need_conv = ctx.path == "/v1/messages" and _is_openai_compat(fb_model) and not ctx.is_direct
             candidates.append((fb_model, fb_url or UPSTREAM_URL, fb_key, fb_need_conv, fb))
 
-    # ── Large Payload Optimization (Zero Quality Loss) ────────────────────────
-    # Groq free tier has an 8,000 TPM limit (prompt + max_tokens).
-    # If the payload > 24,000 bytes (~6,000+ tokens), reorder candidates so 128k
-    # big-context models (deepseek-v4-flash-free, mimo-v2.5-free) are tried first.
-    payload_size = len(ctx.send_content or ctx.body or b"")
-    if payload_size > 24000 and candidates and "api.groq.com" in (candidates[0][1] or ""):
-        groq_cand = candidates[0]
-        big_context_cands = [c for c in candidates[1:] if "api.groq.com" not in (c[1] or "")]
-        if big_context_cands:
-            logger.info(
-                "Large payload (%d bytes / ~%d tokens) — routing to 128k big-context model %s (Groq backup)",
-                payload_size,
-                payload_size // 4,
-                big_context_cands[0][0],
-            )
-            candidates = big_context_cands + [groq_cand]
+    # (Removed Groq-specific Large Payload Optimization)
 
-    client = await get_client()
+    # (Proxy selection moved to inner loop to retry on network failures)
 
     for attempt, (model, url, key, need_conv, config_key) in enumerate(candidates):
         ctx.resolved_model = model
@@ -351,21 +319,25 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
             else:
                 ctx.send_content = ctx.pre_conv_content or ctx.body
 
+        # (Removed Groq-specific payload shrinking)
+
         _build_target_url(ctx)
 
 
 
         _active_key = key
         _active_pool = None
-        if "api.groq.com" in (ctx.per_request_upstream_url or "") and groq_pool.has_keys():
-            _active_pool = groq_pool
-        elif model in FREE_AUTO_MODELS and pool.has_keys():
+        if model in FREE_AUTO_MODELS and pool.has_keys():
             _active_pool = pool
 
         if _active_pool:
             _pooled = _active_pool.get_key(model)
             if _pooled:
                 _active_key = _pooled
+                _pooled_url = getattr(_active_pool, "get_url", lambda k: None)(_pooled)
+                if _pooled_url:
+                    ctx.per_request_upstream_url = _pooled_url
+                    _build_target_url(ctx)
             else:
                 logger.warning("key-pool: all keys demoted for %s — using config key", model)
 
@@ -375,7 +347,16 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
         # _req_failed=True on network errors so the outer loop can continue.
         _req_failed = False
         upstream_resp = None
+        network_retries = 0
+        use_proxy = False
         while True:
+            # Pick a new random outbound proxy ONLY for the opencode endpoint and ONLY in case of a 429/network retry after key rotation
+            proxy_url = None
+            is_opencode = ctx.target_url and ("opencode.ai" in ctx.target_url)
+            if OUTBOUND_PROXIES and is_opencode and use_proxy:
+                proxy_url = random.choice(OUTBOUND_PROXIES)
+            client = await get_client(proxy_url=proxy_url)
+            
             # Per-attempt: refresh content-length and auth
             if ctx.send_content is not None:
                 ctx.headers["content-length"] = str(len(ctx.send_content))
@@ -386,8 +367,6 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
             ctx.headers.pop("anthropic-beta", None)
             if _active_key and _active_key != "none":
                 ctx.headers["authorization"] = f"Bearer {_active_key}"
-
-
 
 
             auth_present = "yes" if ctx.headers.get("authorization") else "no"
@@ -429,17 +408,66 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
                 )
 
             except httpx.RequestError as exc:
-                logger.error("Upstream request failed (attempt %d): %s", attempt, exc)
+                logger.error("Upstream request failed (attempt %d, net_retry %d): %s", attempt, network_retries, exc)
+                network_retries += 1
+                if network_retries < 3 and OUTBOUND_PROXIES and is_opencode:
+                    logger.info("Retrying with a new proxy...")
+                    use_proxy = True
+                    continue  # loop again to pick a new proxy
                 _req_failed = True
                 break  # exit key loop; outer loop handles continuation
 
             # ── Key rotation on error or latency benchmark on success ─────────────────
+            if upstream_resp.status_code == 429:
+                if proxy_url:
+                    logger.warning("Proxy %s received 429 Too Many Requests. Banning and rotating...", proxy_url)
+                    ban_proxy(proxy_url)
+                    network_retries += 1
+                    if network_retries < 3 and OUTBOUND_PROXIES and is_opencode:
+                        await upstream_resp.aclose()
+                        continue
+                else:
+                    # Direct request (no proxy used) returned 429. Try key rotation first.
+                    if _active_pool:
+                        _active_pool.demote(_active_key, model)
+                        _next_key = _active_pool.get_key(model)
+                        if _next_key and _next_key != _active_key:
+                            logger.warning(
+                                "key-pool: key[%d] got 429 for %s — rotating to key[%d] direct",
+                                _active_pool._key_index(_active_key),
+                                model,
+                                _active_pool._key_index(_next_key),
+                            )
+                            await upstream_resp.aclose()
+                            _active_key = _next_key
+                            _next_url = getattr(_active_pool, "get_url", lambda k: None)(_next_key)
+                            if _next_url:
+                                ctx.per_request_upstream_url = _next_url
+                                _build_target_url(ctx)
+                            continue  # retry direct with next key
+                        else:
+                            logger.warning("key-pool: all keys demoted/exhausted for %s — starting proxy routing", model)
+                            # Cycle active key so we still have a key to send with proxy
+                            if _active_pool._keys:
+                                idx = (_active_pool._keys.index(_active_key) + 1) % len(_active_pool._keys)
+                                _active_key = _active_pool._keys[idx]
+                                
+                    # If we have no key pool, or key pool is exhausted: start proxy routing!
+                    network_retries += 1
+                    if network_retries < 3 and OUTBOUND_PROXIES and is_opencode:
+                        logger.warning("Starting proxy routing for %s (attempt %d)", model, network_retries)
+                        use_proxy = True
+                        await upstream_resp.aclose()
+                        continue
+                
+                # If we get here, it means we did NOT continue (we exhausted retries or it's not opencode)
+                break
+                    
             if upstream_resp.status_code == 413:
                 logger.warning(
                     "Model %s returned 413 Payload Too Large (TPM limit exceeded) — trying next fallback model candidate",
                     model,
                 )
-                await upstream_resp.aclose()
                 break  # exit key loop; outer loop will try next candidate model
             elif upstream_resp.status_code >= 400 and _active_pool:
                 _active_pool.demote(_active_key, model)
@@ -454,6 +482,10 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
                     )
                     await upstream_resp.aclose()
                     _active_key = _next_key
+                    _next_url = getattr(_active_pool, "get_url", lambda k: None)(_next_key)
+                    if _next_url:
+                        ctx.per_request_upstream_url = _next_url
+                        _build_target_url(ctx)
                     continue  # retry same model with next key
             elif upstream_resp.status_code == 200 and _active_pool:
                 elapsed = time.time() - t0
@@ -542,7 +574,9 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
 
                 async def converted_stream():
                     try:
-                        async for chunk in _openai_stream_to_anthropic(upstream_resp, ctx.resolved_model or ""):
+                        async for chunk in _openai_stream_to_anthropic(
+                            upstream_resp, ctx.resolved_model or ""
+                        ):
                             yield chunk
                     except Exception as exc:
                         logger.error("Stream conversion error: %s", exc)
@@ -558,8 +592,7 @@ async def _forward_to_upstream(ctx: RequestContext) -> Response:
                     oai_body = await upstream_resp.aread()
                     await upstream_resp.aclose()
                     anthropic_resp = _openai_to_anthropic(json.loads(oai_body), ctx.resolved_model or "")
-                    resp_str, _ = scan_and_redact_secrets(json.dumps(anthropic_resp))
-                    return JSONResponse(json.loads(resp_str), status_code=200)
+                    return JSONResponse(anthropic_resp, status_code=200)
                 except Exception as exc:
                     logger.error("OpenAI→Anthropic conversion failed: %s", exc)
                     await upstream_resp.aclose()
@@ -616,8 +649,6 @@ async def forward_request(request: Request) -> Response:
         send_content=content,
     )
 
-    from .observability.stats import record
-
     _t_start = time.monotonic()
 
     _t_sanitize = time.monotonic()
@@ -642,5 +673,4 @@ async def forward_request(request: Request) -> Response:
         ctx.resolved_model or "unknown",
         status,
     )
-    record(ctx.resolved_model or "unknown", status, _total_ms)
     return response

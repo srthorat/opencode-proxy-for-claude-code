@@ -4,9 +4,9 @@ WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1
 
-# Install curl, git, nodejs, npm for zero-touch auto plugin setup
+# Install curl and ca-certificates for healthchecks
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
-    curl git nodejs npm ca-certificates \
+    curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies before copying source (preserves Docker layer cache)
@@ -15,7 +15,7 @@ RUN python3 -c "import tomllib,subprocess,sys; f=open('pyproject.toml','rb'); de
 
 COPY . /app
 
-RUN chmod +x /app/docker-entrypoint.sh /app/scripts/setup.sh
+RUN chmod +x /app/docker-entrypoint.sh
 RUN useradd --create-home --uid 1001 --shell /bin/bash appuser
 USER appuser
 

@@ -448,37 +448,3 @@ class TestResolveModelConfig:
         # Resolve a non-existent model with/without prefix should strip prefix in resolved model
         upstream, url, key, role = resolve_model_config("opencode-go/non-existent-model")
         assert upstream == "non-existent-model"
-
-    def test_resolve_high_speed_models(self, monkeypatch):
-        # Groq model resolution
-        monkeypatch.setenv("GROQ_API_KEY", "gsk-testkey456")
-        upstream, url, key, role = resolve_model_config("groq-qwen3.6-27b")
-        assert upstream == "qwen/qwen3.6-27b"
-        assert url == "https://api.groq.com/openai/v1"
-        assert key == "gsk-testkey456"
-
-
-
-
-
-
-
-
-
-
-
-
-    def test_resolve_local_ollama_model(self):
-        # Explicit model in models.json
-        upstream, url, key, role = resolve_model_config("qwen2.5-coder:32b")
-        assert upstream == "qwen2.5-coder:32b"
-        from opencode_proxy.config import OLLAMA_LOCAL_URL, is_anthropic_compat
-        assert url == OLLAMA_LOCAL_URL
-        assert key == "ollama"
-        assert is_anthropic_compat(upstream, url) is True
-
-        # Unmapped local model with colon or prefix
-        upstream2, url2, key2, role2 = resolve_model_config("ollama/codellama:7b")
-        assert upstream2 == "codellama:7b"
-        assert url2 == OLLAMA_LOCAL_URL
-        assert is_anthropic_compat(upstream2, url2) is True

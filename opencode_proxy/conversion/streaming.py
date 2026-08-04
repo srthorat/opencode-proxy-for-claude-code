@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import uuid
@@ -43,7 +44,16 @@ async def _openai_stream_to_anthropic(upstream_resp, model: str):
     # P0 #4: wrap the aiter_bytes loop in try/except so that a network error
     # or unexpected exception does not prevent message_stop from being emitted.
     try:
-        async for chunk in upstream_resp.aiter_bytes():
+        iterator = upstream_resp.aiter_bytes()
+        while True:
+            try:
+                chunk = await iterator.__anext__()
+            except asyncio.TimeoutError:
+                yield b":keepalive\n\n"
+                continue
+            except StopAsyncIteration:
+                break
+            
             buffer += chunk
             while b"\n" in buffer:
                 line, buffer = buffer.split(b"\n", 1)
@@ -52,6 +62,7 @@ async def _openai_stream_to_anthropic(upstream_resp, model: str):
                     continue
                 if not line.startswith(b"data: "):
                     continue
+
                 try:
                     obj = json.loads(line[6:])
                     choice = (obj.get("choices") or [{}])[0]

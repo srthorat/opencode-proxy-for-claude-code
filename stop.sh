@@ -20,13 +20,4 @@ if [ -f .run/proxy.pid ]; then
   rm -f .run/proxy.pid
 fi
 
-if [ -f .run/headroom.pid ]; then
-  pid=$(cat .run/headroom.pid)
-  if kill -0 "$pid" >/dev/null 2>&1; then
-    echo "Killing headroom pid $pid"
-    kill "$pid" || true
-  fi
-  rm -f .run/headroom.pid
-fi
-
 echo "Stopped."

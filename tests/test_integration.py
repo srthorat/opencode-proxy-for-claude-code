@@ -327,3 +327,26 @@ class TestProxyRoute:
                 },
             )
         assert resp.status_code == 500
+
+    def test_proxy_strips_accept_encoding_header(self):
+        oai_response = {
+            "choices": [{"message": {"content": "Hello!", "tool_calls": None}, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 3},
+        }
+        mock_client = self._make_mock_client(oai_response)
+
+        with patch("opencode_proxy.forward.get_client", AsyncMock(return_value=mock_client)):
+            client = get_client()
+            resp = client.post(
+                "/v1/messages",
+                headers={"Accept-Encoding": "gzip, deflate, br"},
+                json={
+                    "model": "kimi-k3",
+                    "messages": [{"role": "user", "content": "Hello"}],
+                },
+            )
+        assert resp.status_code == 200
+        # Verify accept-encoding was removed from the headers passed to build_request
+        build_request_args = mock_client.build_request.call_args
+        passed_headers = build_request_args[1]["headers"]
+        assert "accept-encoding" not in [k.lower() for k in passed_headers.keys()]

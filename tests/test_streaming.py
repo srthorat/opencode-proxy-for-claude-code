@@ -146,11 +146,11 @@ class TestPlainTextStreaming:
         assert events[-1]["type"] == "message_stop"
 
     @pytest.mark.asyncio
-    async def test_length_finish_reason_maps_to_max_tokens(self):
+    async def test_length_finish_reason_maps_to_end_turn(self):
         chunks = [delta_chunk(content="x"), delta_chunk(finish_reason="length")]
         events = await collect_events(chunks)
         msg_delta = next(e for e in events if e.get("type") == "message_delta")
-        assert msg_delta["delta"]["stop_reason"] == "max_tokens"
+        assert msg_delta["delta"]["stop_reason"] == "end_turn"
 
 
 # ---------------------------------------------------------------------------
